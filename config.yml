@@ -1,1 +1,6 @@
 token: ""
+# Contains ids of exact canals/sections.
+# Can be filled on discord server.
+canals:
+  join-canal: ""
+  tickets-section: ""

@@ -2,10 +2,10 @@
   "name": "ticket-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "app.ts",
   "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.ts"
   },
   "keywords": [],
   "author": "",

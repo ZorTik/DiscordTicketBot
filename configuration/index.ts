@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import {Document, Node, parseDocument} from "yaml";
+import {Document, Node, parseDocument, stringify} from "yaml";
 import {YamlDocumentNotLoadedError} from "./error";
 import {Optional} from "../util";
 import {Registry} from "../registry";
@@ -13,6 +13,12 @@ export class FileConfiguration implements Configuration, Registry<string> {
     public constructor(path: string) {
         this.path = path;
         this.reload();
+    }
+    save() {
+        if(!fs.existsSync(this.path)) {
+            return false;
+        }
+        fs.writeFileSync(this.path, this.join());
     }
     reload(): Boolean {
         if(!fs.existsSync(this.path)) {
@@ -73,6 +79,11 @@ export class YamlConfiguration extends FileConfiguration {
         super(path);
         this.reload();
     }
+    save(): boolean {
+        fs.writeFileSync(this.getPath(), stringify(document));
+        return true;
+    }
+
     reload(): Boolean {
         this.document = null;
         let success = super.reload();
@@ -80,6 +91,9 @@ export class YamlConfiguration extends FileConfiguration {
             this.document = parseDocument(this.join());
         }
         return success;
+    }
+    set(path: string, value: unknown) {
+        this.document.set(path, value);
     }
     has(path: string): boolean {
         return this.from(doc1 => doc1.has(path)).isPresent();
@@ -123,5 +137,34 @@ export class YamlConfiguration extends FileConfiguration {
         if(this.document == null) {
             throw new YamlDocumentNotLoadedError(this);
         }
+    }
+}
+export class JsonFileMap extends FileConfiguration {
+    private dataJson;
+    constructor(path: string) {
+        super(path);
+        this.reload();
+    }
+    save(): boolean {
+        fs.writeFileSync(this.getPath(), JSON.stringify(this.dataJson));
+        return true;
+    }
+
+    reload(): Boolean {
+        const success = super.reload();
+        this.dataJson = JSON.parse(this.join());
+        return success;
+    }
+    setByKey(key: string, value: any) {
+        this.dataJson[key] = value;
+        this.save();
+    }
+    getByKey(key: string): undefined | null {
+        return this.hasKey(key)
+            ? this.dataJson[key]
+            : null;
+    }
+    hasKey(key: string): boolean {
+        return this.dataJson.hasOwnProperty(key);
     }
 }
