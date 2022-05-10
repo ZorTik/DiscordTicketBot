@@ -7,6 +7,15 @@ export class MainConfiguration extends YamlConfiguration {
     constructor(path: string) {
         super(path);
     }
+    getToken(): ValOpt<string> {
+        return this.getStr("token");
+    }
+    getClient(): ValOpt<string> {
+        return this.getStr("client");
+    }
+    getGuild(): ValOpt<string> {
+        return this.getStr("guild");
+    }
     getJoinCanal(): ValOpt<Canal> {
         return this.getCanal("canals.join-canal");
     }

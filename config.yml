@@ -1,4 +1,6 @@
 token: ""
+client: ""
+guild: ""
 # Contains ids of exact canals/sections.
 # Can be filled on discord server.
 canals:

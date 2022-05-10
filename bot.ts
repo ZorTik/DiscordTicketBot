@@ -9,7 +9,7 @@ import {
     TextChannel
 } from "discord.js";
 import {Canal} from "./configuration/impl/main";
-import {client, data} from "./app";
+import {bot, client, data, exit, invokeStop, logger} from "./app";
 import {ValOpt} from "./configuration";
 import {TicketBotData} from "./configuration/impl/data";
 
@@ -72,6 +72,12 @@ export class TicketBot {
             this.setupData.getSource().set("canals.tickets-section", child.parentId);
         }
     }
+    stop() {
+        logger.info("Stopping...");
+        invokeStop();
+        exit();
+    }
+    // TODO: Function of getting all ticket channels.
     private static deleteInChannel(channel: AnyChannel, id: string): Promise<any> {
         if(channel.isText) {
             channel = <TextChannel>channel;
