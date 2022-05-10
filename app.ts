@@ -63,7 +63,8 @@ fs.readdir("event", (err, files) => {
     }
     files.forEach(fileName => {
         if(fileName.endsWith(".js") || fileName.endsWith(".ts")) {
-            require("event/" + fileName);
+            const evt = require("event/" + fileName);
+            client.on(evt.on, evt.evt);
         }
     });
 });
