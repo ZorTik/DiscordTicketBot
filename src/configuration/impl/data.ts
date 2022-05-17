@@ -8,6 +8,9 @@ export class TicketBotData extends JsonFileMap {
     }
     addTicketId(id: string) {
         let ids = this.getTicketIds();
+        if(ids == null) {
+            return;
+        }
         if(ids.indexOf(id) > -1) {
             return;
         }
@@ -16,15 +19,18 @@ export class TicketBotData extends JsonFileMap {
     }
     removeTicketId(id: string) {
         let ids = this.getTicketIds();
+        if(ids == null) {
+            return;
+        }
         let index = ids.indexOf(id);
         if(index > -1) {
             ids.splice(index, 1);
         }
     }
-    getJoinMessageId(): string {
-        return this.getByKey(TicketBotData.JOIN_MESSAGE_KEY);
+    getJoinMessageId(): string | null {
+        return this.getByKey(TicketBotData.JOIN_MESSAGE_KEY) as (string | null);
     }
-    getTicketIds(): Array<string> {
-        return this.getByKey(TicketBotData.TICKET_IDS_KEY);
+    getTicketIds(): Array<string> | null {
+        return this.getByKey(TicketBotData.TICKET_IDS_KEY) as Array<string> | null;
     }
 }

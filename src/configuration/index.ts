@@ -12,13 +12,15 @@ export class FileConfiguration implements Configuration, Registry<string> {
     private data: string[];
     public constructor(path: string) {
         this.path = path;
+        this.data = [];
         this.reload();
     }
-    save() {
+    save(): boolean {
         if(!fs.existsSync(this.path)) {
             return false;
         }
         fs.writeFileSync(this.path, this.join());
+        return true;
     }
     reload(): Boolean {
         if(!fs.existsSync(this.path)) {
@@ -28,11 +30,11 @@ export class FileConfiguration implements Configuration, Registry<string> {
             .split(FileConfiguration.LINE_SEP);
         return true;
     }
-    allBy(pred: (T) => boolean): string[] {
+    allBy(pred: (arg: string) => boolean): string[] {
         return this.all()
             .filter(pred);
     }
-    first(pred: (T) => boolean): string | null {
+    first(pred: (arg: string) => boolean): string | null {
         let lines = this.allBy(pred);
         return lines.length > 0
             ? lines[0] : null;
@@ -49,17 +51,22 @@ export class FileConfiguration implements Configuration, Registry<string> {
 }
 export class ValOpt<T> implements Optional<T> {
     readonly value: T | null;
-    constructor(value: T = null) {
+    constructor(value: T | null = null) {
         this.value = value;
     }
-    ifPresent<O>(cons: (T) => O, def: O = null) {
+    mapIfPresent<O>(cons: (arg: T) => O, def: O | null = null): O | null {
         return !this.isEmpty()
-            ? cons(this.value)
+            ? cons(this.value as T)
             : def;
     }
-    ifNotPresent<O>(cons: (T) => null): ValOpt<T> {
+    ifPresent<O>(cons: (arg: T) => null, def: O | null = null) {
+        !this.isEmpty()
+            ? cons(this.value as T)
+            : def;
+    }
+    ifNotPresent<O>(cons: () => null): ValOpt<T> {
         if(!this.isPresent()) {
-            cons(this.value);
+            cons();
         }
         return this;
     }
@@ -69,14 +76,18 @@ export class ValOpt<T> implements Optional<T> {
     isPresent(): boolean {
         return !this.isEmpty();
     }
+    orElse(def: T): T {
+        return this.get()?? def;
+    }
     get(): T | null {
-        return this.ifPresent(o => o, null);
+        return this.mapIfPresent(o => o, null);
     }
 }
 export class YamlConfiguration extends FileConfiguration {
-    private document: Document.Parsed
+    private document: Document.Parsed | null;
     public constructor(path: string) {
         super(path);
+        this.document = null;
         this.reload();
     }
     save(): boolean {
@@ -93,18 +104,20 @@ export class YamlConfiguration extends FileConfiguration {
         return success;
     }
     set(path: string, value: unknown) {
-        this.document.set(path, value);
+        if(this.document != null) {
+            this.document.set(path, value);
+        }
     }
     has(path: string): boolean {
         return this.from(doc1 => doc1.has(path)).isPresent();
     }
-    getInt(path: string, def: number = null): ValOpt<number> {
+    getInt(path: string, def: number | null = null): ValOpt<number> {
         return this.get(path, def);
     }
-    getStr(path: string, def: string = null): ValOpt<string> {
+    getStr(path: string, def: string | null = null): ValOpt<string> {
         return this.get(path, def)
     }
-    get<T>(path: string, def: T = null): ValOpt<T> {
+    get<T>(path: string, def: T | null = null): ValOpt<T> {
         return <ValOpt<T>>this.from(doc1 => {
             if(doc1.has(path)) {
                 return doc1.get(path)
@@ -131,7 +144,7 @@ export class YamlConfiguration extends FileConfiguration {
     }
     doc(): Document.Parsed {
         this.verifyLoaded();
-        return this.document;
+        return this.document as Document.Parsed;
     }
     private verifyLoaded() {
         if(this.document == null) {
@@ -140,9 +153,10 @@ export class YamlConfiguration extends FileConfiguration {
     }
 }
 export class JsonFileMap extends FileConfiguration {
-    private dataJson;
+    private dataJson: any;
     constructor(path: string) {
         super(path);
+        this.dataJson = null;
         this.reload();
     }
     save(): boolean {

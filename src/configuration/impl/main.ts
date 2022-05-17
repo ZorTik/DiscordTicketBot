@@ -37,7 +37,7 @@ export class Canal {
     getId(): string {
         return this.id;
     }
-    toDJSCanal(djsClient: Client = client): Promise<AnyChannel> {
+    toDJSCanal(djsClient: Client = client): Promise<AnyChannel | null> {
         let channels = djsClient.channels;
         return channels.fetch(this.id);
     }

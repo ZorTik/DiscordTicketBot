@@ -1,6 +1,6 @@
 import {EmbedFieldData, Interaction, MessageEmbed} from "discord.js";
 import {SetupData, SetupPart} from "../setup";
-import {setFooter} from "../util/index";
+import {setFooter} from "../util";
 const setupData = new SetupData();
 module.exports = {
     on: 'interactionCreate',

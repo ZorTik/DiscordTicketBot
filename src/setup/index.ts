@@ -27,7 +27,7 @@ export class SetupPart {
     }
     private readonly name: string;
     private readonly func;
-    constructor(name: string, func) {
+    constructor(name: string, func: (arg: SetupData) => boolean) {
         this.name = name;
         this.func = func;
     }

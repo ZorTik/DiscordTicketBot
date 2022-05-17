@@ -20,14 +20,16 @@ export class TicketBot {
         this.setupData = setupData;
         this.bot = bot;
     }
-    async runSetup(initChannel: TextChannel = null): Promise<string | null> {
+    async runSetup(initChannel: TextChannel | null = null): Promise<string | null> {
         const source = this.setupData.getSource();
         const joinCanal: ValOpt<Canal> = source.getJoinCanal();
         if(data.hasKey(TicketBotData.JOIN_MESSAGE_KEY) && joinCanal.isPresent()) {
-            const mid: string = data.getJoinMessageId();
-            let channel: AnyChannel = await joinCanal.get()
-                .toDJSCanal(this.bot);
-            await TicketBot.deleteInChannel(channel, mid);
+            const mid: string | null = data.getJoinMessageId();
+            let channel: Canal | null = joinCanal.get();
+            let djsC;
+            if(mid != null && channel != null && (djsC = await channel.toDJSCanal(this.bot)) != null) {
+                await TicketBot.deleteInChannel(djsC, mid);
+            }
         }
         if(data.hasKey(TicketBotData.TICKET_IDS_KEY)) {
             let ids = data.getTicketIds();
@@ -46,10 +48,13 @@ export class TicketBot {
         if(errMessage != null) {
             return errMessage;
         }
-        if(this.setupData.isComplete()) {
-            joinCanal.get().toDJSCanal(this.bot)
-                .then((c: AnyChannel) => {
-                    // TODO: Send join message
+        if(this.setupData.isComplete() && joinCanal.isPresent()) {
+            let canal = joinCanal.get()!!;
+            canal.toDJSCanal(this.bot)
+                .then((c: AnyChannel | null) => {
+                    if(c != null) {
+                        // TODO: Send join message
+                    }
                 })
             return null;
         }
@@ -79,7 +84,7 @@ export class TicketBot {
     }
     // TODO: Function of getting all ticket channels.
     private static deleteInChannel(channel: AnyChannel, id: string): Promise<any> {
-        if(channel.isText) {
+        if(channel.isText()) {
             channel = <TextChannel>channel;
             return channel.messages.fetch(id)
                 .then((m: Message) => {

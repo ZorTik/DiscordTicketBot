@@ -1,5 +1,5 @@
 interface Logger<L extends LevelDef = LevelDef> {
-    log(message: string, level: L);
+    log(message: string, level: L): any;
 }
 class LevelDef {
     identifier: string;
@@ -22,7 +22,7 @@ abstract class DefaultLogger implements Logger {
     err(message: string) {
         this.log(message, Level.ERR);
     }
-    abstract log(message: string, level: LevelDef);
+    abstract log(message: string, level: LevelDef): any;
 }
 export class DateTimeLogger extends DefaultLogger {
     log(message: string, level: LevelDef) {
