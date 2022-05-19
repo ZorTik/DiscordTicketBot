@@ -51,31 +51,31 @@ client.on('guildCreate', (g: Guild) => {
                 .setName("check")
                 .setDescription("Checks and shows if there is anything left to set up."))
     ].map(b => b.toJSON());
-    rest.post(appGuildCommands(), {body: commandsJSON})
+    rest.post(appGuildCommands(g), {body: commandsJSON})
         .then(() => {logger.info("Commands registered!")})
         .catch(logger.err);
 });
 client.on('guildDelete', (g: Guild) => {
-    rest.get(appGuildCommands())
+    rest.get(appGuildCommands(g))
         .then((data) => {
             const promises = [];
             for (const cmd of data as Array<any>) {
                 promises.push(rest.delete(<RouteLike>(Routes.applicationGuildCommands(
-                    config.getClient().orElse(""),
+                    client.application.id,
                     g.id) + "/" + cmd.id)));
             }
             return Promise.all(promises);
         });
 });
 // Load events
-fs.readdir("event", (err, files) => {
+fs.readdir("src/event", (err, files) => {
     if(err != null) {
         exit("Cannot load events! Error: " + err);
         return;
     }
     files.forEach(fileName => {
         if(fileName.endsWith(".js") || fileName.endsWith(".ts")) {
-            const evt = require("event/" + fileName);
+            const evt = require("src/event/" + (fileName.substring(0, fileName.length - 3)));
             client.on(evt.on, evt.evt);
         }
     });

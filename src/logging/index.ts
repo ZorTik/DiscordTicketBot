@@ -27,12 +27,10 @@ abstract class DefaultLogger implements Logger {
 export class DateTimeLogger extends DefaultLogger {
     log(message: string, level: LevelDef) {
         const date = new Date();
-        console.log("[" + function() {
-            return (date.getUTCDay() + 1)
-                + ". " + (date.getUTCMonth() + 1)
-                + ". " + date.getUTCFullYear()
-                + " " + date.getUTCHours()
-                + " " + date.getUTCMinutes();
-        } + "]")
+        console.log("[" + ((date.getUTCDay() + 1)
+            + "/" + (date.getUTCMonth() + 1)
+            + "/" + date.getUTCFullYear()
+            + " " + date.getUTCHours()
+            + ":" + date.getUTCMinutes()) + "] " + message);
     }
 }

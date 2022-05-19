@@ -1,9 +1,11 @@
 import {Routes} from "discord-api-types/v9";
-import {config} from "../app";
+import {client, config} from "../app";
+import {Guild} from "discord.js";
 
-export function appGuildCommands() {
+export function appGuildCommands(g: Guild | string) {
+    let gId = g instanceof Guild ? g.id : <string>g;
     return Routes.applicationGuildCommands(
-        config.getClient().get()?? "",
-        config.getGuild().get()?? "",
+        client.application.id,
+        gId,
     );
 }
