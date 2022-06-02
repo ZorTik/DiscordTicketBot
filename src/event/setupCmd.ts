@@ -1,8 +1,8 @@
 import {EmbedFieldData, Interaction, MessageEmbed} from "discord.js";
-import {SetupData, SetupPart} from "../setup";
+import {Setup, SetupPart} from "../setup";
 import {setFooter} from "../util/index";
-const setupData = new SetupData();
-module.exports = {
+const setupData = new Setup();
+export = {
     on: 'interactionCreate',
     evt: async (interaction: Interaction) => {
         if(interaction.isCommand() && interaction.commandName === "ticketsetup") {
@@ -33,11 +33,13 @@ module.exports = {
                         }
                     });
                 embedBuilder.setFields(fields);
-                setFooter(embedBuilder, "Setup");
-                await interaction.followUp({
+                setFooter(embedBuilder, "Setup all requirements with /ticketsetup!");
+                await interaction.reply({
                     embeds: [embedBuilder],
                     ephemeral: true
                 });
+            } else {
+
             }
         }
     }

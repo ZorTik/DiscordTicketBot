@@ -12,7 +12,7 @@ export class Level {
     static WARN = new LevelDef("WARNING");
     static ERR = new LevelDef("ERROR");
 }
-abstract class DefaultLogger implements Logger {
+export abstract class DefaultLogger implements Logger {
     info(message: string) {
         this.log(message, Level.INFO);
     }
@@ -25,7 +25,7 @@ abstract class DefaultLogger implements Logger {
     abstract log(message: string, level: LevelDef): any;
 }
 export class DateTimeLogger extends DefaultLogger {
-    log(message: string, level: LevelDef) {
+    log(message: string, level: LevelDef): any {
         const date = new Date();
         console.log("[" + ((date.getUTCDay() + 1)
             + "/" + (date.getUTCMonth() + 1)

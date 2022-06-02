@@ -1,13 +1,13 @@
 import {MainConfiguration} from "./configuration/impl/main";
-import {ClientEvents, Guild} from "discord.js";
+import {ApplicationCommand, ClientEvents, Guild, Snowflake} from "discord.js";
 import {TicketBot} from "./bot";
-import {SetupData} from "./setup";
-import {TicketBotData} from "./configuration/impl/data";
 import * as fs from "fs";
 import {SlashCommandBuilder, SlashCommandSubcommandBuilder} from "@discordjs/builders";
-import {RequestData, REST, RouteLike} from "@discordjs/rest";
+import {REST, RouteLike} from "@discordjs/rest";
 import {Routes} from "discord-api-types/v9";
 import {appGuildCommands} from "./util/routes";
+import {registerCommands} from "./util/index";
+import {JsonFileMap} from "./configuration";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -16,25 +16,32 @@ export const info = (message: string) => logger.info(message);
 export const error = (message: string) => logger.err(message);
 info("Loading configuration...");
 export const config = new MainConfiguration("./config.yml");
-export const data = new TicketBotData("./data.json");
 export const client = new Client({intents: [Intents.FLAGS.GUILDS]});
 export const rest = new REST({version: "9"});
-export const bot = new TicketBot(new SetupData());
 export function exit(message: string | null = null) {
     if(message != null) {
         logger.err(message);
     }
     process.exit(0);
 }
-const token = config.getStr("token").ifNotPresent(() => {
+const token = config.getToken().ifNotPresent(() => {
     exit("No token specified!");
     return null;
 });
+rest.setToken(<string>token.get());
+let commands = [
+    new SlashCommandBuilder()
+        .setName("ticketsetup")
+        .setDescription("Setup commands for Ticket Bot.")
+        .addSubcommand(new SlashCommandSubcommandBuilder()
+            .setName("check")
+            .setDescription("Checks and shows if there is anything left to set up."))
+];
 client.on('ready', (e: ClientEvents) => {
-    const ts = new Date().getTime();
+    const ts = new Date();
     const gDef = <Guild>Array.from(client.guilds.cache.values())
         .find((g) => {
-            return ts - (g as Guild).joinedTimestamp <= 10000;
+            return ts.getMilliseconds() - (g as Guild).joinedAt.getMilliseconds() <= 10000;
         })
     info("Successfully connected to " + (
         gDef != null
@@ -43,17 +50,8 @@ client.on('ready', (e: ClientEvents) => {
     ) + "!");
 });
 client.on('guildCreate', (g: Guild) => {
-    let commandsJSON = [
-        new SlashCommandBuilder()
-            .setName("ticketsetup")
-            .setDescription("Setup commands for Ticket Bot.")
-            .addSubcommand(new SlashCommandSubcommandBuilder()
-                .setName("check")
-                .setDescription("Checks and shows if there is anything left to set up."))
-    ].map(b => b.toJSON());
-    rest.post(appGuildCommands(g), {body: commandsJSON})
-        .then(() => {logger.info("Commands registered!")})
-        .catch(logger.err);
+    // Guild bot initial logic
+    registerCommands(g, commands);
 });
 client.on('guildDelete', (g: Guild) => {
     rest.get(appGuildCommands(g))
@@ -75,16 +73,29 @@ fs.readdir("src/event", (err, files) => {
     }
     files.forEach(fileName => {
         if(fileName.endsWith(".js") || fileName.endsWith(".ts")) {
-            const evt = require("src/event/" + (fileName.substring(0, fileName.length - 3)));
-            client.on(evt.on, evt.evt);
+            import("./event/" + (fileName.substring(0, fileName.length - 3)))
+                .then(evt => {
+                    client.on(evt["on"], evt["evt"]);
+                });
         }
     });
 });
 try {
-    client.login(token.get());
+    client.login(token.get())
+        .then(() => {
+            client.guilds.cache
+                .forEach((g: Guild, id: Snowflake) => {
+                    let toReg = commands.filter(c => {
+                        return g.commands.cache.filter((c2: ApplicationCommand) => c.name === c2.name)
+                            .size == 0;
+                    });
+                    registerCommands(g, toReg);
+                })
+        });
 } catch (e) {
     exit("Cannot login client: " + (e as Error).message)
 }
+export const bot = new TicketBot(new JsonFileMap("../data.json"));
 export function invokeStop() {
 
 }

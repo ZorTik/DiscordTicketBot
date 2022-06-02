@@ -3,6 +3,8 @@ import {Document, Node, parseDocument, stringify} from "yaml";
 import {YamlDocumentNotLoadedError} from "./error";
 import {Optional} from "../util";
 import {Registry} from "../registry";
+import {AnyChannel, Client} from "discord.js";
+import {client} from "../app";
 export interface Configuration {
     reload(): Boolean;
 }
@@ -50,7 +52,7 @@ export class FileConfiguration implements Configuration, Registry<string> {
     }
 }
 export class ValOpt<T> implements Optional<T> {
-    readonly value: T | null;
+    value: T | null;
     constructor(value: T | null = null) {
         this.value = value;
     }
@@ -78,6 +80,9 @@ export class ValOpt<T> implements Optional<T> {
     }
     orElse(def: T): T {
         return this.get()?? def;
+    }
+    set set(value: T) {
+        this.value = value;
     }
     get(): T | null {
         return this.mapIfPresent(o => o, null);
@@ -116,6 +121,12 @@ export class YamlConfiguration extends FileConfiguration {
     }
     getStr(path: string, def: string | null = null): ValOpt<string> {
         return this.get(path, def)
+    }
+    getCanal(path: string): ValOpt<Canal> {
+        return this.from((doc: Document.Parsed) => {
+            let id = <string>doc.get(path)
+            return id != null ? new Canal(id) : null;
+        });
     }
     get<T>(path: string, def: T | null = null): ValOpt<T> {
         return <ValOpt<T>>this.from(doc1 => {
@@ -180,5 +191,16 @@ export class JsonFileMap extends FileConfiguration {
     }
     hasKey(key: string): boolean {
         return this.dataJson.hasOwnProperty(key);
+    }
+}
+export class Canal extends ValOpt<string> {
+    getId(): string | null {
+        return this.get();
+    }
+    toDJSCanal(djsClient: Client = client): Promise<AnyChannel | null> {
+        let channels = djsClient.channels;
+        let id = this.getId();
+        return id != null ? channels.fetch(id)
+            : Promise.reject("Channeel id is not present.");
     }
 }
