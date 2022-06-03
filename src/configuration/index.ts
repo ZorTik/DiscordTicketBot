@@ -3,7 +3,7 @@ import {Document, Node, parseDocument, stringify} from "yaml";
 import {YamlDocumentNotLoadedError} from "./error";
 import {Optional} from "../util";
 import {Registry} from "../registry";
-import {AnyChannel, Client} from "discord.js";
+import {AnyChannel, Client, Guild} from "discord.js";
 import {client} from "../app";
 export interface Configuration {
     reload(): Boolean;
@@ -44,8 +44,8 @@ export class FileConfiguration implements Configuration, Registry<string> {
     all(): string[] {
         return this.data;
     }
-    join(): string {
-        return this.all().join(FileConfiguration.LINE_SEP);
+    join(lineSep: string = FileConfiguration.LINE_SEP): string {
+        return this.all().join(lineSep);
     }
     getPath(): string {
         return this.path;
@@ -110,11 +110,13 @@ export class YamlConfiguration extends FileConfiguration {
     }
     set(path: string, value: unknown) {
         if(this.document != null) {
-            this.document.set(path, value);
+            if(path.includes(".")) {
+                this.document.setIn(path.split("."), value);
+            } else this.document.set(path, value);
         }
     }
     has(path: string): boolean {
-        return this.from(doc1 => doc1.has(path)).isPresent();
+        return this.from(doc1 => doc1.hasIn(path)).isPresent();
     }
     getInt(path: string, def: number | null = null): ValOpt<number> {
         return this.get(path, def);
@@ -124,15 +126,15 @@ export class YamlConfiguration extends FileConfiguration {
     }
     getCanal(path: string): ValOpt<Canal> {
         return this.from((doc: Document.Parsed) => {
-            let id = <string>doc.get(path)
+            let id = <string>YamlConfiguration._getIn(doc, path);
             return id != null ? new Canal(id) : null;
         });
     }
     get<T>(path: string, def: T | null = null): ValOpt<T> {
         return <ValOpt<T>>this.from(doc1 => {
-            if(doc1.has(path)) {
-                return doc1.get(path)
-            } else return def;
+            let res = YamlConfiguration._getIn(doc1, path);
+            if(res == null) res = def;
+            return res;
         });
     }
     getKeys(path: string): ValOpt<string[]> {
@@ -162,6 +164,13 @@ export class YamlConfiguration extends FileConfiguration {
             throw new YamlDocumentNotLoadedError(this);
         }
     }
+    private static _getIn(doc: Document.Parsed, str: string): any {
+        let path = str.includes(".");
+        let contains = path
+            ? doc.hasIn(str.split("."))
+            : doc.has(str);
+        return contains ? (path? doc.getIn(str.split(".")): doc.get(str)): null;
+    }
 }
 export class JsonFileMap extends FileConfiguration {
     private dataJson: any;
@@ -177,7 +186,9 @@ export class JsonFileMap extends FileConfiguration {
 
     reload(): Boolean {
         const success = super.reload();
-        this.dataJson = JSON.parse(this.join());
+        if(success) {
+            this.dataJson = JSON.parse(this.join(""));
+        }
         return success;
     }
     setByKey(key: string, value: any) {
@@ -197,10 +208,10 @@ export class Canal extends ValOpt<string> {
     getId(): string | null {
         return this.get();
     }
-    toDJSCanal(djsClient: Client = client): Promise<AnyChannel | null> {
-        let channels = djsClient.channels;
-        let id = this.getId();
-        return id != null ? channels.fetch(id)
-            : Promise.reject("Channeel id is not present.");
+    async toDJSCanal(guild: Guild | string, djsClient: Client = client): Promise<AnyChannel | null> {
+        let channelId: string | null;
+        if((channelId = this.get()) == null) return Promise.reject("Channel id is not present.");
+        if(typeof guild === "string") guild = await djsClient.guilds.fetch(guild);
+        return await guild.channels.fetch(channelId);
     }
 }

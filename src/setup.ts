@@ -4,6 +4,7 @@ import {TicketBotData} from "./configuration/impl/data";
 export class Setup extends TicketBotData {
     constructor(source: JsonFileMap, guildId: string) {
         super(source, guildId);
+        this.reload();
         if(!this.isComplete()) {
             logger.warn("Setup is not complete! Please complete setup with /ticketsetup!")
         }

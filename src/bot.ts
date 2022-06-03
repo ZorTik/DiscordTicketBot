@@ -5,16 +5,16 @@ import {
     Client, Guild,
     GuildChannel,
     Message, MessageEmbed,
-    NonThreadGuildBasedChannel,
+    NonThreadGuildBasedChannel, Snowflake,
     TextChannel
 } from "discord.js";
 import {client, exit, invokeStop, logger} from "./app";
 import {Canal, JsonFileMap, ValOpt} from "./configuration";
-import {TicketBotData} from "./configuration/impl/data";
 import {DefaultLogger} from "./logging";
 
 export class TicketBot {
-    private static JOIN_MESSAGE_KEY: string = "join-message";
+    public static JOIN_MESSAGE_KEY: string = "join-message";
+    public static TICKET_IDS_KEY: string = "ticket-ids";
     private readonly guildData: Map<string, Setup>;
     private readonly bot: Client;
     private readonly logger: DefaultLogger;
@@ -23,43 +23,40 @@ export class TicketBot {
         this.logger = _logger;
         this.storage = storage;
         this.guildData = new Map<string, Setup>();
-        bot.guilds.cache.forEach((g: Guild) => {
-            this.initGuildData(g);
-        })
+        bot.guilds.cache.forEach((g: Guild, key: Snowflake) => {
+            this.initGuildData(key);
+        });
         this.bot = bot;
     }
     async runSetup(initChannel: TextChannel | null = null): Promise<string | null> {
         let guild: Guild;
         if(initChannel instanceof GuildChannel && (guild = initChannel.guild) != null) {
-            const setupData = this?.getGuildData(guild);
-            if(setupData == null) return "Guild is not loaded.";
-            const joinCanal: Canal = setupData.getJoinCanal;
-            const mid = setupData.get(TicketBot.JOIN_MESSAGE_KEY);
+            const guildData = this?.getGuildData(guild);
+            if(guildData == null) return "Guild is not loaded.";
+            const joinCanal: Canal = guildData.getJoinCanal;
+            const mid = guildData.get(TicketBot.JOIN_MESSAGE_KEY);
             if(mid != null && joinCanal.isPresent()) {
                 let djsC;
-                if((djsC = await joinCanal.toDJSCanal(this.bot)) != null) {
+                if((djsC = await joinCanal.toDJSCanal(guild, this.bot)) != null) {
                     await TicketBot.deleteInChannel(djsC, mid);
                 }
             }
-            if(setupData.hasKey(TicketBotData.TICKET_IDS_KEY)) {
-                let ids = data.getTicketIds();
-                if(ids != null) {
-                    for (let id in ids) {
-                        this.bot.channels.fetch(id)
-                            .then(c => {
-                                if(c != null && c.isText()) {
-                                    c.delete();
-                                }
-                            })
-                    }
-                }
+            let ids = guildData.getTicketIds();
+            for (let id in ids) {
+                this.bot.channels.fetch(id)
+                    .then(c => {
+                        if(c != null && c.isText()) {
+                            c.delete();
+                        }
+                    })
             }
-            let errMessage = this.checkSetup();
+            guildData.modifyTicketIds(ids => ids.splice(0, ids.length));
+            let errMessage = this.checkSetup(guild.id);
             if(errMessage != null) {
                 return errMessage;
             }
-            if(setupData.isComplete() && joinCanal.isPresent()) {
-                joinCanal.toDJSCanal(this.bot)
+            if(guildData.isComplete() && joinCanal.isPresent()) {
+                joinCanal.toDJSCanal(guild, this.bot)
                     .then((c: AnyChannel | null) => {
                         if(c != null) {
                             // TODO: Send join message
@@ -71,40 +68,34 @@ export class TicketBot {
         }
         return Promise.reject("Guild is not loaded!");
     }
-    checkSetup(): string | null {
-        let source = this.setupData.getSource();
-        if(source.getJoinCanal().isEmpty()) {
+    checkSetup(guildId: string): string | null {
+        let source = this.getGuildData(guildId);
+        if(source == null) return "Guild is not loaded!";
+        if(source.getJoinCanal.isEmpty()) {
             return "Join canal is not set!";
-        } else if(source.getTicketsSection().isEmpty()) {
+        } else if(source.getTicketsCategory.isEmpty()) {
             return "Tickets category is not set!";
         }
         return null;
-    }
-    setJoinCanal(canal: AnyChannel) {
-        this.setupData.getSource().set("canals.join-canal", canal.id);
-    }
-    setTicketsSection(child: AnyChannel) {
-        if(child instanceof GuildChannel && child.parentId != null) {
-            this.setupData.getSource().set("canals.tickets-section", child.parentId);
-        }
     }
     stop() {
         logger.info("Stopping...");
         invokeStop();
         exit();
     }
+    getGuild(guildId: string): Guild | undefined {
+        return this.bot.guilds.cache
+            .filter(g => g.id === guildId)
+            .first();
+    }
     getGuildData(guild: Guild | string): Setup | null {
         let id = guild instanceof Guild?
             guild.id : guild as string;
         return <Setup | null>(this.guildData.has(id)?this.guildData.get(id) : null);
     }
-    private initGuildData(g: Guild): boolean {
-        let data = new TicketBotData(this.storage, g.id);
-        let reloaded = data.reload();
-        if(reloaded) {
-            this.guildData.set(g.id, new Setup(this.storage, g.id));
-        }
-        return reloaded;
+    private initGuildData(gId: string): boolean {
+        this.guildData.set(gId, new Setup(this.storage, gId));
+        return true;
     }
     private doIfCanalMember(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => any) {
         this.supplyIfCanalMember(channel, action);

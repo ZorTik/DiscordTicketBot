@@ -14,6 +14,6 @@ export function registerCommands(g: Guild, commands: SlashCommandBuilder[] | Sla
     rest.put(appGuildCommands(g), {
         body: commands.map(c => c.toJSON()),
     })
-        .then(() => {logger.info("Commands registered!")})
+        .then(() => {logger.info(`-- Commands for ${g.name} registered!`)})
         .catch(r => logger.err(r));
 }

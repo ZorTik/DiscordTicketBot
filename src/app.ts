@@ -8,6 +8,7 @@ import {Routes} from "discord-api-types/v9";
 import {appGuildCommands} from "./util/routes";
 import {registerCommands} from "./util/index";
 import {JsonFileMap} from "./configuration";
+import {Message, MessagesConfiguration} from "./configuration/impl/messages";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -16,8 +17,13 @@ export const info = (message: string) => logger.info(message);
 export const error = (message: string) => logger.err(message);
 info("Loading configuration...");
 export const config = new MainConfiguration("./config.yml");
+export const messages = new MessagesConfiguration("./messages.yml");
 export const client = new Client({intents: [Intents.FLAGS.GUILDS]});
 export const rest = new REST({version: "9"});
+export var bot: TicketBot;
+export function message<T>(message: Message<T>, ...args: string[]): T {
+    return messages.message(message, ...args);
+}
 export function exit(message: string | null = null) {
     if(message != null) {
         logger.err(message);
@@ -80,22 +86,28 @@ fs.readdir("src/event", (err, files) => {
         }
     });
 });
+let dataPath = "./data.json";
+if(!fs.existsSync(dataPath)) {
+    exit("File data.json does not exist!");
+}
 try {
     client.login(token.get())
         .then(() => {
+            // Bot dependent initialization logic.
+            logger.info("Loading bot...");
+            bot = new TicketBot(new JsonFileMap(dataPath), client);
             client.guilds.cache
-                .forEach((g: Guild, id: Snowflake) => {
+                .forEach((g: Guild) => {
                     let toReg = commands.filter(c => {
                         return g.commands.cache.filter((c2: ApplicationCommand) => c.name === c2.name)
                             .size == 0;
                     });
                     registerCommands(g, toReg);
-                })
+                });
         });
 } catch (e) {
     exit("Cannot login client: " + (e as Error).message)
 }
-export const bot = new TicketBot(new JsonFileMap("../data.json"));
 export function invokeStop() {
 
 }

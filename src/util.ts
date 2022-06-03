@@ -1,3 +1,11 @@
+import {
+    InteractionReplyOptions,
+    MessageActionRow,
+    MessageComponentInteraction,
+    MessageEmbed,
+    MessagePayload
+} from "discord.js";
+
 export interface Optional<T> {
     value: T | null;
     isEmpty(): boolean;
@@ -10,4 +18,21 @@ export abstract class KeyValueStorage<K, V> {
     hasKey(key: K): boolean {
         return this.get(key) != null;
     }
+}
+export async function replySuccess(interaction: MessageComponentInteraction, text: string, ephemeral: boolean = true) {
+    return reply(interaction, new MessageEmbed()
+        .setTitle("✓ Success!")
+        .setDescription(text)
+        .setColor("#2ad490"))
+}
+export async function reply(interaction: MessageComponentInteraction, content: string | MessageEmbed | MessageActionRow, ephemeral: boolean = true): Promise<void> {
+    let options: string | MessagePayload | InteractionReplyOptions = {ephemeral: ephemeral};
+    if(typeof content === "string") {
+        options["content"] = content
+    } else if(content instanceof MessageEmbed) {
+        options["embeds"] = [content];
+    } else {
+        options["components"] = [content];
+    }
+    return interaction.reply(options);
 }

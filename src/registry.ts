@@ -1,5 +1,5 @@
 export interface Registry<T> {
-    first(pred: (T) => boolean): T | null;
-    allBy(pred: (T) => boolean): T[];
+    first(pred: (arg0: T) => boolean): T | null;
+    allBy(pred: (arg0: T) => boolean): T[];
     all(): T[];
 }

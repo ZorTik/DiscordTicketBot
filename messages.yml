@@ -1,0 +1,28 @@
+server_not_loaded: "Server data are not loaded!"
+bad_channel: "This message is not in a right channel!"
+join_canal_set: "Join canal has been successfully set!"
+tickets_category_set: "Tickets category has been successfully set!"
+not_child_channel: "This message is not in a child text channel!"
+setup_incomplete: "You need to set up everything before you can finish the setup! Error: {}"
+setup_finish: "Ticket Bot is set up correctly and can be used now!"
+action_not_supported: "This action is not supported! :("
+set: "✅ Set"
+not_set: "❌ Not Set"
+setup_embed:
+  incomplete:
+    title: "Setup is not completed!"
+    desc: "Ouch! Please check all your modules below and set missing\nones with /ticketsetup before accepting new tickets!"
+  complete:
+    title: "Great! All is set up!"
+    desc: "Ticket system is ready to be used!"
+  footer: "Setup all requirements with /ticketsetup!"
+  selection_menu:
+    join_canal:
+      label: "Set Join Canal"
+      desc: "Sets this canal as main canal!"
+    tickets_category:
+      label: "Set Tickets Category"
+      desc: "Sets category this canal is in as the tickets category!"
+    finish_setup:
+      label: "Finish Setup!"
+      desc: "Checks if all values all set and performs initial setup tasks!"
