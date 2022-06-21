@@ -1,14 +1,40 @@
-import {Canal, JsonFileMap} from "../index";
+import {Canal, JsonFileMap, ValOpt} from "../index";
 import {KeyValueStorage} from "../../util";
 import {TicketBot} from "../../bot";
+import {Guild, GuildMember, User} from "discord.js";
+
+class SavedCollection<T> {
+    private readonly source: any;
+    private readonly key: string;
+    readonly data: T[];
+    constructor(source: any, key: string, load: (arg0: any) => T = arg0 => <T>arg0) {
+        this.source = source;
+        this.key = key;
+        let arr;
+        this.data = source.hasOwnProperty(key) && Array.isArray(arr = source[key]) ? arr.map(load): [];
+    }
+    save() {
+        this.source[this.key] = this.data;
+    }
+    find(pred: (arg0: T) => boolean): T | undefined {
+        return this.data.find(pred);
+    }
+    map<U>(transform: (arg0: T) => U): U[] {
+        return this.data.map(transform);
+    }
+    push(val: T): number {
+        return this.data.push(val);
+    }
+}
 
 export class TicketBotData extends KeyValueStorage<string, any> {
     readonly source: JsonFileMap;
-    private readonly guildId: string;
-    private readonly joinChannel: SavedCanal;
-    private readonly ticketsCategory: SavedCanal;
-    private tickets: Ticket[];
-    private data: any;
+    readonly guildId: string;
+    readonly joinChannel: SavedCanal;
+    readonly ticketsCategory: SavedCanal;
+    data: any;
+    users?: SavedCollection<TicketUser>;
+    tickets?: SavedCollection<Ticket>;
     constructor(source: JsonFileMap, guildId: string) {
         super();
         this.source = source;
@@ -16,18 +42,14 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         this.data = null;
         this.joinChannel = new SavedCanal(this, "joinCanal");
         this.ticketsCategory = new SavedCanal(this, "ticketsCategory");
-        this.tickets = [];
     }
     save(): boolean {
         let data = this.data;
-        if(data == null) {
-            return false;
-        }
-        this.data[TicketBot.TICKET_IDS_KEY] = this.tickets
-            .map(t => t.getCanalId);
+        if(data == null) return false;
         this.joinChannel.save();
         this.ticketsCategory.save();
-        this.source.setByKey(this.guildId, data);
+        this.tickets?.save();
+        this.writeData(data);
         return true;
     }
     reload() {
@@ -38,7 +60,25 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         }
         this.joinChannel.load();
         this.ticketsCategory.load();
-        this.loadTickets();
+        this.tickets = new SavedCollection<Ticket>(this.data, TicketBot.TICKET_IDS_KEY,
+            (data) => new Ticket(this, data));
+    }
+    getUser(memberId: string): TicketUser {
+        if(this.users == null) {
+            throw new Error("Cannot get user before data are loaded!");
+        }
+        let user = this.users.find(u => u.getMemberId === memberId);
+        if(user === undefined) {
+            this.users.push(user = new TicketUser(memberId));
+            this.save();
+        }
+        return user;
+    }
+    getTicket(canalId: string): ValOpt<Ticket> {
+        if(this.tickets == null) {
+            throw new Error("Cannot get ticket before data are loaded!");
+        }
+        return new ValOpt(this.tickets.find(t => t.canalId == canalId));
     }
     set(key: string, value: any) {
         this.data[key] = value;
@@ -48,32 +88,11 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         return this.data.hasOwnProperty(key)
         ? this.data[key] : null;
     }
-    modifyTicketIds(action: (ids: string[]) => void) {
-        this.save();
-        let ids = this.getTicketIds();
-        action(ids);
-        this.set(TicketBot.TICKET_IDS_KEY, ids);
-        this.loadTickets();
-    }
     getTicketIds(): string[] {
-        let obj = this.get(TicketBot.TICKET_IDS_KEY);
-        return obj != null ? <string[]>obj : [];
+        return (this.tickets || []).map(t => t.canalId);
     }
-    get getJoinCanal(): Canal {
-        return this.joinChannel;
-    }
-    get getTicketsCategory(): Canal {
-        return this.ticketsCategory;
-    }
-    get getSource(): JsonFileMap {
-        return this.source;
-    }
-    get getData(): any | null {
-        return this.data;
-    }
-    private loadTickets() {
-        this.tickets = this.getTicketIds()
-            .map(id => new Ticket(this.guildId, id));
+    private writeData(data: any) {
+        this.source.setByKey(this.guildId, data);
     }
 }
 export class SavedCanal extends Canal {
@@ -85,13 +104,13 @@ export class SavedCanal extends Canal {
         this.key = key;
     }
     save() {
-        let data = this.ref.getData;
+        let data = this.ref.data;
         if(data != null && this.key != null) {
             data[this.key] = this.get() as string;
         }
     }
     load() {
-        let data = this.ref.getData;
+        let data = this.ref.data;
         if(this.key != null && data.hasOwnProperty(this.key)) {
             this.value = data[this.key] as string;
         }
@@ -103,15 +122,39 @@ export class SavedCanal extends Canal {
         super.set = newId;
     }
 }
-export class Ticket extends Canal {
-    private readonly guildId: string;
-    private readonly canalId: string;
-    constructor(guildId: string, canalId: string) {
-        super(canalId);
-        this.guildId = guildId;
-        this.canalId = canalId;
+export class TicketUser {
+    private readonly memberId: string;
+    constructor(memberId: string) {
+        this.memberId = memberId;
     }
-    get getCanalId(): string {
-        return this.canalId;
+    get getMemberId(): string {
+        return this.memberId;
+    }
+    async toDJSMember(g: Guild): Promise<GuildMember> {
+        return g.members.fetch(this.memberId);
+    }
+}
+type TicketData = {
+    canalId: string;
+    userIds: string[];
+}
+export class Ticket extends Canal {
+    private botData: TicketBotData;
+    readonly guildId: string;
+    readonly canalId: string;
+    readonly ticketData: TicketData;
+    constructor(data: TicketBotData, ticketData: TicketData) {
+        super(ticketData.canalId);
+        this.botData = data;
+        this.guildId = data.guildId;
+        this.canalId = ticketData.canalId;
+        this.ticketData = ticketData;
+        if(!data.getTicketIds().some(id => id === this.canalId)) {
+            data.tickets?.push(this);
+            data.save();
+        }
+    }
+    getUsers(): TicketUser[] {
+        return this.ticketData.userIds.map(this.botData.getUser);
     }
 }

@@ -53,7 +53,8 @@ export class TicketBot {
                         }
                     })
             }
-            guildData.modifyTicketIds(ids => ids.splice(0, ids.length));
+            guildData.tickets.splice(0, guildData.tickets.length);
+            guildData.save();
             let errMessage = this.checkSetup(guild.id);
             if(errMessage != null) {
                 return errMessage;
@@ -62,7 +63,9 @@ export class TicketBot {
                 joinCanal.toDJSCanal(guild, this.bot)
                     .then(async (c: AnyChannel | null) => {
                         if(c != null && c instanceof TextChannel) {
-                            await this.sendJoinMessage(c, guild);
+                            let joinMessage = await this.sendJoinMessage(c);
+                            guildData.set(TicketBot.JOIN_MESSAGE_KEY, joinMessage.id);
+                            guildData.save();
                         }
                     })
                 return null;
@@ -107,18 +110,12 @@ export class TicketBot {
         let guild = channel.guild;
         return guild != null ? action(guild, channel) : null;
     }
-    private async sendJoinMessage(c: TextChannel, guild: Guild): Promise<Message> {
-        let fields: EmbedFieldData[] = message(YamlMessage.JOIN_EMBED.DESC)
-            .map(line => {
-                return {
-                    inline: false,
-                    name: "",
-                    value: line
-                }
-            });
+    private async sendJoinMessage(c: TextChannel): Promise<Message> {
+        let messages = message(YamlMessage.JOIN_EMBED.DESC)
+            .split("%n");
         const embed = new MessageEmbed()
             .setTitle(message(YamlMessage.JOIN_EMBED.TITLE))
-            .setFields(fields)
+            .setDescription(messages.join("\n"))
             .setColor(<ColorResolvable>message(YamlMessage.JOIN_EMBED.COLOR));
         setFooter(embed, "Idk what to put here");
         return c.send({

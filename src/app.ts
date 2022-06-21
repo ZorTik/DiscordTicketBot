@@ -99,7 +99,7 @@ try {
     client.login(token.get())
         .then(() => {
             // Bot dependent initialization logic.
-            logger.info("Loading bot...");
+            logger.info("Connecting to servers...");
             bot = new TicketBot(new JsonFileMap(dataPath), client);
             client.guilds.cache
                 .forEach((g: Guild) => {

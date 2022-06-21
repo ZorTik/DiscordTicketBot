@@ -61,9 +61,7 @@ export class YamlMessage<T> {
     }
     static JOIN_EMBED = {
         TITLE: new YamlMessage("join_embed.title", "Create Ticket"),
-        DESC: new YamlMessage("join_embed.description", [
-            ""
-        ]),
+        DESC: new YamlMessage("join_embed.description", ""),
         COLOR: new YamlMessage("join_embed.color", "#00ff99"),
     }
     static ALL: YamlMessage<any>[] = [

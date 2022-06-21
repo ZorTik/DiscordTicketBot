@@ -1,3 +1,4 @@
+# %n - New Line
 server_not_loaded: "Server data are not loaded!"
 bad_channel: "This message is not in a right channel!"
 join_canal_set: "Join canal has been successfully set!"
@@ -28,6 +29,5 @@ setup_embed:
       desc: "Checks if all values all set and performs initial setup tasks!"
 join_embed:
   title: "Create Ticket"
-  description:
-    - ""
+  description: "Idk XDDDD%nx bnjmxckvbonxcvjkbnocnvxbjoi"
   color: "#00ff99"
