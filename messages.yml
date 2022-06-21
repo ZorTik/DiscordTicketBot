@@ -14,7 +14,7 @@ setup_embed:
     desc: "Ouch! Please check all your modules below and set missing\nones with /ticketsetup before accepting new tickets!"
   complete:
     title: "Great! All is set up!"
-    desc: "Ticket system is ready to be used!"
+    desc: "Ticket system is ready to be used! You can now use Finish Setup action in selector below. You can also adjust or change all the settings and perform setup again."
   footer: "Setup all requirements with /ticketsetup!"
   selection_menu:
     join_canal:
@@ -26,3 +26,8 @@ setup_embed:
     finish_setup:
       label: "Finish Setup!"
       desc: "Checks if all values all set and performs initial setup tasks!"
+join_embed:
+  title: "Create Ticket"
+  description:
+    - ""
+  color: "#00ff99"

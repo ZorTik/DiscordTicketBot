@@ -36,3 +36,10 @@ export async function reply(interaction: MessageComponentInteraction, content: s
     }
     return interaction.reply(options);
 }
+
+export function hasProperties(obj: any, props: string[]): boolean {
+    for(let prop of props) {
+        if(!obj.hasOwnProperty(prop)) return false;
+    }
+    return true;
+}

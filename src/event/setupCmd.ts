@@ -8,7 +8,7 @@ import {Setup, SetupPart} from "../setup";
 import {setFooter} from "../util/index";
 import {bot, message, messages} from "../app";
 import {reply, replySuccess} from "../util";
-import {Message} from "../configuration/impl/messages";
+import {YamlMessage} from "../configuration/impl/messages";
 const CHECK_SELECT_MENU_ID = "setup-check-select-menu";
 export = {
     on: 'interactionCreate',
@@ -17,7 +17,7 @@ export = {
         if(setupData == null) {
             if(interaction.isCommand()) {
                 await interaction.reply({
-                    content: message(Message.SERVER_NOT_LOADED),
+                    content: message(YamlMessage.SERVER_NOT_LOADED),
                     ephemeral: true
                 });
             }
@@ -31,43 +31,44 @@ export = {
             if((guild = menu.guild) == null || (data = bot.getGuildData(guild)) == null) return;
             let channel = menu.channel;
             if(channel == null) {
-                await reply(interaction, message(Message.BAD_CHANNEL));
+                await reply(interaction, message(YamlMessage.BAD_CHANNEL));
                 return;
             }
             if(selected === "joinCanal") {
                 data.getJoinCanal.set = channel.id;
                 data.save();
-                await replySuccess(interaction, message(Message.JOIN_CANAL_SET));
+                await replySuccess(interaction, message(YamlMessage.JOIN_CANAL_SET));
             } else if(selected === "ticketsCategory") {
                 if(!(channel instanceof TextChannel) || channel.parentId == null) {
-                    await reply(interaction, message(Message.NOT_CHILD_CHANNEL));
+                    await reply(interaction, message(YamlMessage.NOT_CHILD_CHANNEL));
                     return;
                 }
                 data.getTicketsCategory.set = (await channel.fetch(true)).parentId!!;
                 data.save();
-                await replySuccess(interaction, message(Message.TICKETS_CATEGORY_SET));
+                await replySuccess(interaction, message(YamlMessage.TICKETS_CATEGORY_SET));
             } else if(selected === "finish") {
                 if(!(channel instanceof TextChannel)) return;
                 let errMessage: string | null = bot.checkSetup(guild.id);
-                if(errMessage == null) errMessage = "";
-                if(await bot.runSetup(channel) == null) {
-                    await replySuccess(interaction, message(Message.SETUP_FINISH));
-                } else await reply(interaction, message(Message.SETUP_INCOMPLETE, errMessage));
-            } else await reply(interaction, message(Message.ACTION_NOT_SUPPORTED));
+                if(errMessage == null && (errMessage = await bot.runSetup(channel)) == null) {
+                    errMessage = "";
+                }
+                if(errMessage.length == 0) {
+                    await replySuccess(interaction, message(YamlMessage.SETUP_FINISH));
+                } else await reply(interaction, message(YamlMessage.SETUP_INCOMPLETE, errMessage));
+            } else await reply(interaction, message(YamlMessage.ACTION_NOT_SUPPORTED));
             return;
         }
-        if(interaction.isCommand() && interaction.commandName === "ticketsetup") {
-            // TODO: Make setup handler.
+        if(interaction.isCommand() && interaction.commandName === "tickets") {
             const options = interaction.options;
-            if(options.getSubcommand() === "check") {
+            if(options.getSubcommand() === "setup") {
                 const embedBuilder = new MessageEmbed();
                 if(!setupData.isComplete()) {
-                    embedBuilder.setTitle(message(Message.SETUP_EMBED.INCOMPLETE.TITLE));
-                    embedBuilder.setDescription(message(Message.SETUP_EMBED.INCOMPLETE.DESC));
+                    embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.INCOMPLETE.TITLE));
+                    embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.INCOMPLETE.DESC));
                     embedBuilder.setColor("#00ff99");
                 } else {
-                    embedBuilder.setTitle(message(Message.SETUP_EMBED.COMPLETE.TITLE));
-                    embedBuilder.setDescription(message(Message.SETUP_EMBED.COMPLETE.DESC));
+                    embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.COMPLETE.TITLE));
+                    embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.COMPLETE.DESC));
                     embedBuilder.setColor("#ff0044");
                 }
                 let ind = 0;
@@ -78,12 +79,12 @@ export = {
                             inline: ind % 3 != 0,
                             name: p.getName(),
                             value: p.check(setupData!!)
-                                ? message(Message.SET)
-                                : message(Message.NOT_SET),
+                                ? message(YamlMessage.SET)
+                                : message(YamlMessage.NOT_SET),
                         }
                     });
                 embedBuilder.setFields(fields);
-                setFooter(embedBuilder, message(Message.SETUP_EMBED.FOOTER));
+                setFooter(embedBuilder, message(YamlMessage.SETUP_EMBED.FOOTER));
                 await interaction.reply({
                     embeds: [embedBuilder],
                     ephemeral: true,
@@ -94,18 +95,18 @@ export = {
                                 .setPlaceholder("Available actions...")
                                 .addOptions([
                                     {
-                                        label: message(Message.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.LABEL),
-                                        description: message(Message.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.DESC),
+                                        label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.LABEL),
+                                        description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.DESC),
                                         value: "joinCanal"
                                     },
                                     {
-                                        label: message(Message.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.LABEL),
-                                        description: message(Message.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.DESC),
+                                        label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.LABEL),
+                                        description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.DESC),
                                         value: "ticketsCategory"
                                     },
                                     {
-                                        label: message(Message.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.LABEL),
-                                        description: message(Message.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.DESC),
+                                        label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.LABEL),
+                                        description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.DESC),
                                         value: "finish"
                                     }
                                 ]))

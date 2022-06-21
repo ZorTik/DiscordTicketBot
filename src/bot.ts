@@ -2,19 +2,22 @@ import {Setup} from "./setup";
 import {
     AnyChannel,
     CategoryChannel,
-    Client, Guild,
+    Client, ColorResolvable, EmbedFieldData, Guild,
     GuildChannel,
     Message, MessageEmbed,
     NonThreadGuildBasedChannel, Snowflake,
     TextChannel
 } from "discord.js";
-import {client, exit, invokeStop, logger} from "./app";
+import {client, exit, invokeStop, logger, message} from "./app";
 import {Canal, JsonFileMap, ValOpt} from "./configuration";
 import {DefaultLogger} from "./logging";
+import {YamlMessage} from "./configuration/impl/messages";
+import {setFooter} from "./util/index";
 
 export class TicketBot {
     public static JOIN_MESSAGE_KEY: string = "join-message";
     public static TICKET_IDS_KEY: string = "ticket-ids";
+
     private readonly guildData: Map<string, Setup>;
     private readonly bot: Client;
     private readonly logger: DefaultLogger;
@@ -57,9 +60,9 @@ export class TicketBot {
             }
             if(guildData.isComplete() && joinCanal.isPresent()) {
                 joinCanal.toDJSCanal(guild, this.bot)
-                    .then((c: AnyChannel | null) => {
-                        if(c != null) {
-                            // TODO: Send join message
+                    .then(async (c: AnyChannel | null) => {
+                        if(c != null && c instanceof TextChannel) {
+                            await this.sendJoinMessage(c, guild);
                         }
                     })
                 return null;
@@ -103,6 +106,24 @@ export class TicketBot {
     private supplyIfCanalMember<T>(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => T | null): T | null {
         let guild = channel.guild;
         return guild != null ? action(guild, channel) : null;
+    }
+    private async sendJoinMessage(c: TextChannel, guild: Guild): Promise<Message> {
+        let fields: EmbedFieldData[] = message(YamlMessage.JOIN_EMBED.DESC)
+            .map(line => {
+                return {
+                    inline: false,
+                    name: "",
+                    value: line
+                }
+            });
+        const embed = new MessageEmbed()
+            .setTitle(message(YamlMessage.JOIN_EMBED.TITLE))
+            .setFields(fields)
+            .setColor(<ColorResolvable>message(YamlMessage.JOIN_EMBED.COLOR));
+        setFooter(embed, "Idk what to put here");
+        return c.send({
+            embeds: [embed]
+        });
     }
     // TODO: Function of getting all ticket channels.
     private static deleteInChannel(channel: AnyChannel, id: string): Promise<any> {

@@ -8,7 +8,8 @@ import {Routes} from "discord-api-types/v9";
 import {appGuildCommands} from "./util/routes";
 import {registerCommands} from "./util/index";
 import {JsonFileMap} from "./configuration";
-import {Message, MessagesConfiguration} from "./configuration/impl/messages";
+import {YamlMessage, MessagesConfiguration} from "./configuration/impl/messages";
+import {hasProperties} from "./util";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -21,7 +22,7 @@ export const messages = new MessagesConfiguration("./messages.yml");
 export const client = new Client({intents: [Intents.FLAGS.GUILDS]});
 export const rest = new REST({version: "9"});
 export var bot: TicketBot;
-export function message<T>(message: Message<T>, ...args: string[]): T {
+export function message<T>(message: YamlMessage<T>, ...args: string[]): T {
     return messages.message(message, ...args);
 }
 export function exit(message: string | null = null) {
@@ -37,11 +38,11 @@ const token = config.getToken().ifNotPresent(() => {
 rest.setToken(<string>token.get());
 let commands = [
     new SlashCommandBuilder()
-        .setName("ticketsetup")
-        .setDescription("Setup commands for Ticket Bot.")
+        .setName("tickets")
+        .setDescription("All commands for Ticket Bot.")
         .addSubcommand(new SlashCommandSubcommandBuilder()
-            .setName("check")
-            .setDescription("Checks and shows if there is anything left to set up."))
+            .setName("setup")
+            .setDescription("Performs setup check and offers some actions to take."))
 ];
 client.on('ready', (e: ClientEvents) => {
     const ts = new Date();
@@ -81,6 +82,10 @@ fs.readdir("src/event", (err, files) => {
         if(fileName.endsWith(".js") || fileName.endsWith(".ts")) {
             import("./event/" + (fileName.substring(0, fileName.length - 3)))
                 .then(evt => {
+                    if(!hasProperties(evt, ["on", "evt"])) {
+                        error("Event " + fileName + " is not a valid event!");
+                        return;
+                    }
                     client.on(evt["on"], evt["evt"]);
                 });
         }
