@@ -1,31 +1,8 @@
 import {Canal, JsonFileMap, ValOpt} from "../index";
 import {KeyValueStorage} from "../../util";
-import {TicketBot} from "../../bot";
+import {TicketBot, TicketRequirements} from "../../bot";
 import {Guild, GuildMember, User} from "discord.js";
-
-class SavedCollection<T> {
-    private readonly source: any;
-    private readonly key: string;
-    readonly data: T[];
-    constructor(source: any, key: string, load: (arg0: any) => T = arg0 => <T>arg0) {
-        this.source = source;
-        this.key = key;
-        let arr;
-        this.data = source.hasOwnProperty(key) && Array.isArray(arr = source[key]) ? arr.map(load): [];
-    }
-    save() {
-        this.source[this.key] = this.data;
-    }
-    find(pred: (arg0: T) => boolean): T | undefined {
-        return this.data.find(pred);
-    }
-    map<U>(transform: (arg0: T) => U): U[] {
-        return this.data.map(transform);
-    }
-    push(val: T): number {
-        return this.data.push(val);
-    }
-}
+import {bot} from "../../app";
 
 export class TicketBotData extends KeyValueStorage<string, any> {
     readonly source: JsonFileMap;
@@ -61,7 +38,8 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         this.joinChannel.load();
         this.ticketsCategory.load();
         this.tickets = new SavedCollection<Ticket>(this.data, TicketBot.TICKET_IDS_KEY,
-            (data) => new Ticket(this, data));
+            (data) => Ticket.saveIfAbsent(this, data), (ticket) => ticket.ticketData);
+        this.users = new SavedCollection<TicketUser>(this.data, TicketBot.USER_IDS_KEY);
     }
     getUser(memberId: string): TicketUser {
         if(this.users == null) {
@@ -134,27 +112,93 @@ export class TicketUser {
         return g.members.fetch(this.memberId);
     }
 }
-type TicketData = {
+export type TicketData = {
     canalId: string;
     userIds: string[];
+    creatorId: string;
 }
 export class Ticket extends Canal {
+
+    static async make(guild: Guild, requirements: TicketRequirements): Promise<Ticket | string> {
+        return bot.makeTicket(guild, requirements);
+    }
+    static saveIfAbsent(data: TicketBotData, ticketData: TicketData): Ticket {
+        let ticket = new Ticket(data, ticketData);
+        if(!data.getTicketIds().some(id => id === ticket.canalId)) {
+            data.tickets?.push(ticket);
+            data.save();
+        }
+        return ticket;
+    }
+
     private botData: TicketBotData;
     readonly guildId: string;
     readonly canalId: string;
     readonly ticketData: TicketData;
-    constructor(data: TicketBotData, ticketData: TicketData) {
+    private constructor(data: TicketBotData, ticketData: TicketData) {
         super(ticketData.canalId);
         this.botData = data;
         this.guildId = data.guildId;
         this.canalId = ticketData.canalId;
         this.ticketData = ticketData;
-        if(!data.getTicketIds().some(id => id === this.canalId)) {
-            data.tickets?.push(this);
-            data.save();
+    }
+    async runSetup(guild: Guild): Promise<string | null> {
+        let channel = await guild.channels.fetch(this.canalId);
+        if(channel == null) {
+            return "Channel of the ticket is not present!";
         }
+        let userIds = [...this.ticketData.userIds, this.ticketData.creatorId];
+        userIds.forEach(userId => {
+            channel?.permissionOverwrites.edit(userId, {
+                VIEW_CHANNEL: true,
+            });
+        });
+        return null;
     }
     getUsers(): TicketUser[] {
         return this.ticketData.userIds.map(this.botData.getUser);
+    }
+}
+
+class SavedCollection<T> {
+    private readonly source: any;
+    private readonly key: string;
+    readonly data: T[];
+    saveTransformer: (arg0: T) => any;
+    constructor(source: any, key: string,
+                load: (arg0: any) => T = arg0 => <T>arg0,
+                save: (arg0: T) => any = arg0 => arg0) {
+        this.source = source;
+        this.key = key;
+        this.saveTransformer = save;
+        let arr;
+        this.data = source.hasOwnProperty(key) && Array.isArray(arr = source[key])
+            ? arr.map(load): [];
+    }
+    save() {
+        this.source[this.key] = this.data.map(this.saveTransformer);
+    }
+    find(pred: (arg0: T) => boolean): T | undefined {
+        return this.data.find(pred);
+    }
+    map<U>(transform: (arg0: T) => U): U[] {
+        return this.data.map(transform);
+    }
+    push(val: T): number {
+        return this.data.push(val);
+    }
+    splice(start: number, deleteCount: number): T[] {
+        return this.data.splice(start ,deleteCount);
+    }
+    remove(obj: T): boolean {
+        let index = this.data.indexOf(obj);
+        if(index > -1) {
+            this.data.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+    get length(): number {
+        return this.data.length;
     }
 }

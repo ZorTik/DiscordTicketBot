@@ -35,7 +35,7 @@ export = {
                 return;
             }
             if(selected === "joinCanal") {
-                data.getJoinCanal.set = channel.id;
+                data.joinChannel.set = channel.id;
                 data.save();
                 await replySuccess(interaction, message(YamlMessage.JOIN_CANAL_SET));
             } else if(selected === "ticketsCategory") {
@@ -43,7 +43,7 @@ export = {
                     await reply(interaction, message(YamlMessage.NOT_CHILD_CHANNEL));
                     return;
                 }
-                data.getTicketsCategory.set = (await channel.fetch(true)).parentId!!;
+                data.ticketsCategory.set = (await channel.fetch(true)).parentId!!;
                 data.save();
                 await replySuccess(interaction, message(YamlMessage.TICKETS_CATEGORY_SET));
             } else if(selected === "finish") {
