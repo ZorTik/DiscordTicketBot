@@ -17,6 +17,7 @@ export class MessagesConfiguration extends YamlConfiguration {
             args.forEach(arg => {
                 val = val.replace("{}", arg);
             });
+            val = val.replace("%n", "\n");
             _val = <T><unknown>val;
         }
         return _val;
@@ -30,7 +31,9 @@ export class YamlMessage<T> {
     static NOT_CHILD_CHANNEL = new YamlMessage("not_child_channel", "This message is not in a child text channel!");
     static SETUP_FINISH = new YamlMessage("setup_finish", "Ticket Bot is set up correctly and can be used now!");
     static SETUP_INCOMPLETE = new YamlMessage("setup_incomplete", "You need to set up everything before you can finish the setup! Error: %err");
+    static TICKET_CREATED = new YamlMessage("ticket_created", "Ticket {} has been successfully created!%nPlease click on the link on this message to head up to your ticket and submit requirements.");
     static ACTION_NOT_SUPPORTED = new YamlMessage("action_not_supported", "This action is not supported! :(");
+    static UNEXPECTED_ERROR = new YamlMessage("unexpected_error", "An unexpected error has occured! Please contact admins.");
     static SET = new YamlMessage("set", "✅ Set");
     static NOT_SET = new YamlMessage("not_set", "❌ Not Set");
     static SETUP_EMBED = {

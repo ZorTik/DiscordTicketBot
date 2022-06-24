@@ -5,18 +5,18 @@ import {
     ColorResolvable, DiscordAPIError,
     Guild,
     Message,
-    MessageActionRow, MessageActionRowOptions, MessageEditOptions,
-    MessageEmbed, MessagePayload, MessageSelectMenu,
+    MessageActionRow, MessageActionRowOptions, MessageEmbed, MessageSelectMenu,
     TextChannel
 } from "discord.js";
 import {Setup} from "../setup";
-import {config, logger, message} from "../app";
+import {config, message} from "../app";
 import {YamlMessage} from "../configuration/impl/messages";
 import {setFooter} from "../util/index";
 import {TicketBotData} from "../configuration/impl/data";
+import {CATEGORIES_DROPDOWN_ID} from "../const";
 
-const categoriesDropdownId = "categories-dropdown";
 const handler: ReloadHandler = {
+    id: "joinMessageHandler",
     onReload: async (guild: Guild, guildData: Setup) => {
         let joinCanal = guildData.joinChannel;
         if(!joinCanal.isPresent()) {
@@ -82,14 +82,14 @@ function buildJoinComponents(c: TextChannel): (MessageActionRow | (Required<Base
         components.push(new MessageActionRow()
             .addComponents([
                 new MessageSelectMenu()
-                    .setCustomId(categoriesDropdownId)
+                    .setCustomId(CATEGORIES_DROPDOWN_ID)
                     .setPlaceholder(message(YamlMessage.JOIN_EMBED.SELECTION_MENU.PLACEHOLDER))
                     .addOptions(categories
                         .map(c => {
                             return {
                                 label: c.name,
                                 description: c.description,
-                                value: c.name
+                                value: c.identifier
                             }
                         }))
             ]));

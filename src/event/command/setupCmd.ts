@@ -4,11 +4,11 @@ import {
     MessageEmbed, MessageSelectMenu,
     SelectMenuInteraction, TextChannel
 } from "discord.js";
-import {Setup, SetupPart} from "../setup";
-import {setFooter} from "../util/index";
-import {bot, message, messages} from "../app";
-import {isExactCommand, reply, replySuccess} from "../util";
-import {YamlMessage} from "../configuration/impl/messages";
+import {Setup, SetupPart} from "../../setup";
+import {setFooter} from "../../util/index";
+import {bot, message, messages} from "../../app";
+import {isExactCommand, reply, replySuccess} from "../../util";
+import {YamlMessage} from "../../configuration/impl/messages";
 const CHECK_SELECT_MENU_ID = "setup-check-select-menu";
 export = {
     on: 'interactionCreate',

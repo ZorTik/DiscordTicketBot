@@ -1,6 +1,6 @@
 import {Interaction} from "discord.js";
-import {bot, config, logger, messages} from "../app";
-import {isExactCommand, replyError, replySuccess} from "../util";
+import {bot, config, logger, messages} from "../../app";
+import {isExactCommand, replyError, replySuccess} from "../../util";
 
 export = {
     on: 'interactionCreate',

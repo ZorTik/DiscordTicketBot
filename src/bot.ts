@@ -10,18 +10,20 @@ import {
     Snowflake,
     TextChannel
 } from "discord.js";
-import {client, exit, invokeStop, logger, message} from "./app";
+import {client, config, exit, invokeStop, logger} from "./app";
 import {Canal, JsonFileMap} from "./configuration";
 import {DefaultLogger} from "./logging";
 import assert from "assert";
-import {Ticket, TicketData} from "./configuration/impl/data";
+import {Ticket} from "./configuration/impl/data";
 import {ChannelTypes} from "discord.js/typings/enums";
+import {HasIdentity} from "./types";
 
 /**
  * The main bot class.
  * @author ZorTik
  */
 export class TicketBot {
+
     public static JOIN_MESSAGE_KEY: string = "join-message";
     public static TICKET_IDS_KEY: string = "ticket-ids";
     public static USER_IDS_KEY: string = "user-ids";
@@ -31,6 +33,7 @@ export class TicketBot {
     private readonly logger: DefaultLogger;
     private readonly storage: JsonFileMap;
     readonly reloadHandlers: ReloadHandler[];
+
     constructor(storage: JsonFileMap, bot: Client = client, _logger: DefaultLogger = logger) {
         this.logger = _logger;
         this.storage = storage;
@@ -46,7 +49,7 @@ export class TicketBot {
      * Reloads the bot.
      * @param guild_ The guild to reload bot in.
      */
-    async reload(guild_: Guild | string | null = null): Promise<string | null> {
+    async reload(guild_: Guild | string | null = null, handlerIds: string[] = []): Promise<string | null> {
         if(guild_ != null) {
             let guild = await this.fetchGuild(guild_);
             let guildData = guild != null? this.getGuildData(guild) : null;
@@ -57,6 +60,10 @@ export class TicketBot {
                 return "Setup is not completed.";
             }
             for(let reloadHandler of this.reloadHandlers) {
+                let id = (<HasIdentity>reloadHandler).id;
+                if(handlerIds.length > 0 && (id == null || !handlerIds.includes(id))) {
+                    continue;
+                }
                 try {
                     let err = await reloadHandler.onReload(guild, guildData);
                     if(err != null) {
@@ -106,7 +113,7 @@ export class TicketBot {
      * @param guild The guild to create the channel in.
      * @param requirements The requirements for the channel.
      */
-    async makeTicket(guild: Guild, requirements: TicketRequirements | TicketData): Promise<Ticket | string> {
+    async makeTicket(guild: Guild, requirements: TicketRequirements | (TicketUsersRequirements & TicketRequirements)): Promise<Ticket | string> {
         let guildData = this.getGuildData(guild);
         if(guildData == null || !guildData.isComplete()) {
             return "Setup is not completed. Please set up the bot with /tickets setup.";
@@ -116,7 +123,12 @@ export class TicketBot {
         if(category == null || !(category instanceof CategoryChannel) || creator == null) {
             return "Category or creator are not present.";
         }
-        let ticketChannel = await category.createChannel(`ticket-${creator.nickname}`, {
+        let ticketCategory = config.getCategories()
+            .find(c => c.identifier === requirements.categoryId);
+        if(ticketCategory == null) {
+            return "Unknown category.";
+        }
+        let ticketChannel = await category.createChannel(`ticket-${ticketCategory.identifier}-${creator.user.username}`, {
             topic: `Ticket created by ${creator.nickname}\n
             Created at: ${new Date().toLocaleString()}`,
             type: ChannelTypes.GUILD_TEXT,
@@ -129,8 +141,9 @@ export class TicketBot {
         });
         let ticket = Ticket.saveIfAbsent(guildData, {
             canalId: ticketChannel.id,
+            categoryId: ticketCategory.identifier,
             creatorId: creator.id,
-            userIds: requirements.userIds
+            userIds: ((<TicketUsersRequirements>requirements).userIds) || []
         });
         let errorMessage = await ticket.runSetup(guild);
         if(errorMessage != null) {
@@ -256,10 +269,17 @@ export class TicketBot {
         return new Promise<unknown>(() => null);
     }
 }
-export type TicketRequirements = {
+export type TicketUsersRequirements = {
     userIds: string[];
+}
+
+export type TicketRequirements = {
+    categoryId: string,
     creatorId: string;
 }
-export type ReloadHandler = {
+
+export type ReloadHandler = ReloadHandlerEvent | (HasIdentity & ReloadHandlerEvent);
+
+type ReloadHandlerEvent = {
     onReload: (guild: Guild, data: Setup) => Promise<string | null>;
-};
+}

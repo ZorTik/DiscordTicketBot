@@ -76,6 +76,7 @@ export class TicketBotData extends KeyValueStorage<string, any> {
 
 export type TicketData = {
     canalId: string;
+    categoryId: string,
     creatorId: string;
     userIds: string[];
 }
