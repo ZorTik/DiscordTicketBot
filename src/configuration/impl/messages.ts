@@ -63,6 +63,9 @@ export class YamlMessage<T> {
         TITLE: new YamlMessage("join_embed.title", "Create Ticket"),
         DESC: new YamlMessage("join_embed.description", ""),
         COLOR: new YamlMessage("join_embed.color", "#00ff99"),
+        SELECTION_MENU: {
+            PLACEHOLDER: new YamlMessage("join_embed.selection_menu.placeholder", "Select a Category")
+        }
     }
     static ALL: YamlMessage<any>[] = [
 

@@ -239,7 +239,7 @@ export class TicketBot {
             channel = <TextChannel>channel;
             return channel.messages.fetch(id)
                 .then((m: Message) => {
-                    if (m.deletable) {
+                    if(m.deletable) {
                         return m.delete();
                     }
                 });

@@ -7,7 +7,7 @@ import {
 import {Setup, SetupPart} from "../setup";
 import {setFooter} from "../util/index";
 import {bot, message, messages} from "../app";
-import {reply, replySuccess} from "../util";
+import {isExactCommand, reply, replySuccess} from "../util";
 import {YamlMessage} from "../configuration/impl/messages";
 const CHECK_SELECT_MENU_ID = "setup-check-select-menu";
 export = {
@@ -58,63 +58,58 @@ export = {
             } else await reply(interaction, message(YamlMessage.ACTION_NOT_SUPPORTED));
             return;
         }
-        if(interaction.isCommand() && interaction.commandName === "tickets") {
-            const options = interaction.options;
-            if(options.getSubcommand() === "setup") {
-                const embedBuilder = new MessageEmbed();
-                if(!setupData.isComplete()) {
-                    embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.INCOMPLETE.TITLE));
-                    embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.INCOMPLETE.DESC));
-                    embedBuilder.setColor("#00ff99");
-                } else {
-                    embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.COMPLETE.TITLE));
-                    embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.COMPLETE.DESC));
-                    embedBuilder.setColor("#ff0044");
-                }
-                let ind = 0;
-                const fields: EmbedFieldData[] = SetupPart.vals()
-                    .map(p => {
-                        ind++;
-                        return {
-                            inline: ind % 3 != 0,
-                            name: p.getName(),
-                            value: p.check(setupData!!)
-                                ? message(YamlMessage.SET)
-                                : message(YamlMessage.NOT_SET),
-                        }
-                    });
-                embedBuilder.setFields(fields);
-                setFooter(embedBuilder, message(YamlMessage.SETUP_EMBED.FOOTER));
-                await interaction.reply({
-                    embeds: [embedBuilder],
-                    ephemeral: true,
-                    components: [
-                        new MessageActionRow()
-                            .addComponents(new MessageSelectMenu()
-                                .setCustomId(CHECK_SELECT_MENU_ID)
-                                .setPlaceholder("Available actions...")
-                                .addOptions([
-                                    {
-                                        label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.LABEL),
-                                        description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.DESC),
-                                        value: "joinCanal"
-                                    },
-                                    {
-                                        label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.LABEL),
-                                        description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.DESC),
-                                        value: "ticketsCategory"
-                                    },
-                                    {
-                                        label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.LABEL),
-                                        description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.DESC),
-                                        value: "finish"
-                                    }
-                                ]))
-                    ]
-                });
+        if(interaction.isCommand() && isExactCommand(interaction, "tickets.setup")) {
+            const embedBuilder = new MessageEmbed();
+            if(!setupData.isComplete()) {
+                embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.INCOMPLETE.TITLE));
+                embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.INCOMPLETE.DESC));
+                embedBuilder.setColor("#00ff99");
             } else {
-
+                embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.COMPLETE.TITLE));
+                embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.COMPLETE.DESC));
+                embedBuilder.setColor("#ff0044");
             }
+            let ind = 0;
+            const fields: EmbedFieldData[] = SetupPart.vals()
+                .map(p => {
+                    ind++;
+                    return {
+                        inline: ind % 3 != 0,
+                        name: p.getName(),
+                        value: p.check(setupData!!)
+                            ? message(YamlMessage.SET)
+                            : message(YamlMessage.NOT_SET),
+                    }
+                });
+            embedBuilder.setFields(fields);
+            setFooter(embedBuilder, message(YamlMessage.SETUP_EMBED.FOOTER));
+            await interaction.reply({
+                embeds: [embedBuilder],
+                ephemeral: true,
+                components: [
+                    new MessageActionRow()
+                        .addComponents(new MessageSelectMenu()
+                            .setCustomId(CHECK_SELECT_MENU_ID)
+                            .setPlaceholder("Available actions...")
+                            .addOptions([
+                                {
+                                    label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.LABEL),
+                                    description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.DESC),
+                                    value: "joinCanal"
+                                },
+                                {
+                                    label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.LABEL),
+                                    description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.TICKETS_CATEGORY.DESC),
+                                    value: "ticketsCategory"
+                                },
+                                {
+                                    label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.LABEL),
+                                    description: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.FINISH_SETUP.DESC),
+                                    value: "finish"
+                                }
+                            ]))
+                ]
+            });
         }
     }
 }

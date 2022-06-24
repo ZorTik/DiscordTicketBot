@@ -29,5 +29,7 @@ setup_embed:
       desc: "Checks if all values all set and performs initial setup tasks!"
 join_embed:
   title: "Create Ticket"
-  description: "Idk XDDDD%nx bnjmxckvbonxcvjkbnocnvxbjoi"
+  description: "To create new ticket, please select one of the following options listed in dropdown menu below.%n%nPlease follow rules at https://example.com/rules"
   color: "#00ff99"
+  selection_menu:
+    placeholder: "Select a Category"

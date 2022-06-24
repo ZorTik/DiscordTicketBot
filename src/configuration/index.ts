@@ -4,7 +4,7 @@ import {YamlDocumentNotLoadedError} from "./error";
 import {Optional} from "../util";
 import {Registry} from "../registry";
 import {AnyChannel, Client, Guild} from "discord.js";
-import {client} from "../app";
+import {client, logger} from "../app";
 export interface Configuration {
     reload(): Boolean;
 }
@@ -122,7 +122,7 @@ export class YamlConfiguration extends FileConfiguration {
         return this.get(path, def);
     }
     getStr(path: string, def: string | null = null): ValOpt<string> {
-        return this.get(path, def)
+        return this.get(path, def);
     }
     getCanal(path: string): ValOpt<Canal> {
         return this.from((doc: Document.Parsed) => {
@@ -137,18 +137,27 @@ export class YamlConfiguration extends FileConfiguration {
             return res;
         });
     }
+    getObj<T>(path: string, def: T | null = null): ValOpt<T> {
+        return <ValOpt<T>>this.from(() => {
+            return this.getObjectFrom(path).orElse(def);
+        });
+    }
     getKeys(path: string): ValOpt<string[]> {
+        return new ValOpt<string[]>(this.getObjectFrom(path).mapIfPresent(o => Object.keys(o), []));
+    }
+    private getObjectFrom(path: string): ValOpt<any> {
         return this.from((doc) => {
             let jsSchema = doc.toJS();
-            let pathParts = path.split("\\.");
+            let pathParts = path.split(".");
             let current = jsSchema;
             for(let i = 0; i < pathParts.length; i++) {
-                if(current[i] === undefined) {
+                let part = pathParts[i];
+                if(current[part] === undefined) {
                     return [];
                 }
-                current = current[i];
+                current = current[part];
             }
-            return Object.keys(current);
+            return current;
         });
     }
     from<T>(supplier: (doc: Document.Parsed) => T | null): ValOpt<T> {
@@ -208,10 +217,12 @@ export class Canal extends ValOpt<string> {
     getId(): string | null {
         return this.get();
     }
-    async toDJSCanal(guild: Guild | string, djsClient: Client = client): Promise<AnyChannel | null> {
+    async toDJSCanal(guild: Guild | string, djsClient: Client = client, cache: boolean = false): Promise<AnyChannel | null> {
         let channelId: string | null;
-        if((channelId = this.get()) == null) return Promise.reject("Channel id is not present.");
+        if((channelId = this.getId()) == null) return Promise.reject("Channel id is not present.");
         if(typeof guild === "string") guild = await djsClient.guilds.fetch(guild);
-        return await guild.channels.fetch(channelId);
+        return await guild.channels.fetch(channelId, {
+            cache: cache
+        });
     }
 }

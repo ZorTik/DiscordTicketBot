@@ -1,4 +1,6 @@
 import {
+    CommandInteraction,
+    Interaction,
     InteractionReplyOptions,
     MessageActionRow,
     MessageComponentInteraction,
@@ -6,6 +8,8 @@ import {
     MessagePayload
 } from "discord.js";
 import * as fs from "fs";
+import {ReloadHandler} from "./bot";
+import {bot, logger} from "./app";
 
 export interface Optional<T> {
     value: T | null;
@@ -20,13 +24,20 @@ export abstract class KeyValueStorage<K, V> {
         return this.get(key) != null;
     }
 }
-export async function replySuccess(interaction: MessageComponentInteraction, text: string, ephemeral: boolean = true) {
+type ReplyInteraction = MessageComponentInteraction | CommandInteraction;
+export async function replySuccess(interaction: ReplyInteraction, text: string, ephemeral: boolean = true) {
     return reply(interaction, new MessageEmbed()
         .setTitle("✓ Success!")
         .setDescription(text)
         .setColor("#2ad490"))
 }
-export async function reply(interaction: MessageComponentInteraction, content: string | MessageEmbed | MessageActionRow, ephemeral: boolean = true): Promise<void> {
+export async function replyError(interaction: ReplyInteraction, text: string, ephemeral: boolean = true) {
+    return reply(interaction, new MessageEmbed()
+        .setTitle("✕ Error!")
+        .setDescription(text)
+        .setColor("#d42a3e"))
+}
+export async function reply(interaction: ReplyInteraction, content: string | MessageEmbed | MessageActionRow, ephemeral: boolean = true): Promise<void> {
     let options: string | MessagePayload | InteractionReplyOptions = {ephemeral: ephemeral};
     if(typeof content === "string") {
         options["content"] = content
@@ -52,6 +63,19 @@ export function readFilesRecursivelySync(dir: string, callback: (path: string, c
         callback(path, content);
     }
 }
+export async function loadModulesRecursively(dirParent: string): Promise<any[]> {
+    let objs = [];
+    for(let path of getFilePathsRecursively(`src/${dirParent}`)) {
+        let pathSpl = path.split("/");
+        if(pathSpl[pathSpl.length - 1].includes(".")) {
+            let spl = path.split(".");
+            spl = spl.slice(0, spl.length - 1);
+            path = spl.join(".");
+        }
+        objs.push(await import(path.replace("src/", "./")));
+    }
+    return objs;
+}
 export function getFilePathsRecursively(dir: string): string[] {
     let paths: string[] = [];
     let files = fs.readdirSync(dir);
@@ -63,4 +87,17 @@ export function getFilePathsRecursively(dir: string): string[] {
         } else paths.push(path);
     }
     return paths;
+}
+
+export function isExactCommand(interaction: Interaction, cmdUrl: string): boolean {
+    if(!interaction.isCommand()) return false;
+    let spl = cmdUrl.split(".");
+    for(let i = 0; i < spl.length; i++) {
+        let part = spl[i];
+        if((i == 0 && interaction.commandName !== part)
+        || (i > 0 && interaction.options.getSubcommand() !== part)) {
+            return false;
+        }
+    }
+    return true;
 }

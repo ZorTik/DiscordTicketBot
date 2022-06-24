@@ -9,7 +9,7 @@ import {appGuildCommands} from "./util/routes";
 import {registerCommands} from "./util/index";
 import {JsonFileMap} from "./configuration";
 import {YamlMessage, MessagesConfiguration} from "./configuration/impl/messages";
-import {getFilePathsRecursively, hasProperties, readFilesRecursivelySync} from "./util";
+import {hasProperties, loadModulesRecursively} from "./util";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -43,6 +43,9 @@ let commands = [
         .addSubcommand(new SlashCommandSubcommandBuilder()
             .setName("setup")
             .setDescription("Performs setup check and offers some actions to take."))
+        .addSubcommand(new SlashCommandSubcommandBuilder()
+            .setName("reload")
+            .setDescription("Reloads the bot."))
 ];
 client.on('ready', (e: ClientEvents) => {
     const ts = new Date();
@@ -73,24 +76,12 @@ client.on('guildDelete', (g: Guild) => {
         });
 });
 // Load events
-fs.readdir("src/event", (err, files) => {
-    if(err != null) {
-        exit("Cannot load events! Error: " + err);
+loadModulesRecursively("event").then(modules => modules.forEach(evt => {
+    if(!hasProperties(evt, ["on", "evt"])) {
         return;
     }
-    files.forEach(fileName => {
-        if(fileName.endsWith(".js") || fileName.endsWith(".ts")) {
-            import("./event/" + (fileName.substring(0, fileName.length - 3)))
-                .then(evt => {
-                    if(!hasProperties(evt, ["on", "evt"])) {
-                        error("Event " + fileName + " is not a valid event!");
-                        return;
-                    }
-                    client.on(evt["on"], evt["evt"]);
-                });
-        }
-    });
-});
+    client.on(evt["on"], evt["evt"]);
+}))
 let dataPath = "./data.json";
 if(!fs.existsSync(dataPath)) {
     logger.info("File data.json does not exist! Creating a new one...");
@@ -114,19 +105,12 @@ try {
                     });
                     registerCommands(g, toReg);
                 });
-            for(let path of getFilePathsRecursively("src/reload-handlers")) {
-                let pathSpl = path.split("/");
-                if(pathSpl[pathSpl.length - 1].includes(".")) {
-                    let spl = path.split(".");
-                    spl = spl.slice(0, spl.length - 1);
-                    path = spl.join(".");
-                }
-                logger.info("Loading reload handler " + path + "...");
-                let rh = <ReloadHandler>(await import(path.replace("src/", "./")));
+            (await loadModulesRecursively("reload-handlers")).forEach(obj => {
+                let rh = <ReloadHandler>obj;
                 if(rh != null) {
                     bot.reloadHandlers.push(rh);
                 }
-            }
+            });
             await bot.reload();
         });
 } catch (e) {
