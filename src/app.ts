@@ -9,7 +9,7 @@ import {appGuildCommands} from "./util/routes";
 import {registerCommands} from "./util/index";
 import {JsonFileMap} from "./configuration";
 import {YamlMessage, MessagesConfiguration} from "./configuration/impl/messages";
-import {hasProperties, readFilesRecursivelySync} from "./util";
+import {getFilePathsRecursively, hasProperties, readFilesRecursivelySync} from "./util";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -102,7 +102,7 @@ if(!fs.existsSync(dataPath)) {
 }
 try {
     client.login(token.get())
-        .then(() => {
+        .then(async () => {
             // Bot dependent initialization logic.
             logger.info("Connecting to servers...");
             bot = new TicketBot(new JsonFileMap(dataPath), client);
@@ -114,14 +114,20 @@ try {
                     });
                     registerCommands(g, toReg);
                 });
-            readFilesRecursivelySync("./reload-handlers", (path) => {
-                import(path).then(h => {
-                    let rh = (<ReloadHandler>h);
-                    if(rh != null) {
-                        bot.reloadHandlers.push(rh);
-                    }
-                });
-            });
+            for(let path of getFilePathsRecursively("src/reload-handlers")) {
+                let pathSpl = path.split("/");
+                if(pathSpl[pathSpl.length - 1].includes(".")) {
+                    let spl = path.split(".");
+                    spl = spl.slice(0, spl.length - 1);
+                    path = spl.join(".");
+                }
+                logger.info("Loading reload handler " + path + "...");
+                let rh = <ReloadHandler>(await import(path.replace("src/", "./")));
+                if(rh != null) {
+                    bot.reloadHandlers.push(rh);
+                }
+            }
+            await bot.reload();
         });
 } catch (e) {
     exit("Cannot login client: " + (e as Error).message)

@@ -5,20 +5,31 @@ import {message} from "../app";
 import {YamlMessage} from "../configuration/impl/messages";
 import {setFooter} from "../util/index";
 
-const handler: ReloadHandler = async (guild: Guild, guildData: Setup) => {
-    let joinCanal = guildData.joinChannel;
-    if(!joinCanal.isPresent()) {
-        return "Join canal is not set up!";
+const handler: ReloadHandler = {
+    onReload: async (guild: Guild, guildData: Setup) => {
+        let joinCanal = guildData.joinChannel;
+        if(!joinCanal.isPresent()) {
+            return "Join canal is not set up!";
+        }
+        joinCanal.toDJSCanal(guild)
+            .then(async (c: AnyChannel | null) => {
+                if(c != null && c instanceof TextChannel) {
+                    let mId = guildData.get(TicketBot.JOIN_MESSAGE_KEY);
+                    let jm: Message | null = null;
+                    if(mId != null) {
+                        try {
+                            jm = await c.messages.fetch(guildData.get(TicketBot.JOIN_MESSAGE_KEY))
+                        } catch(ignored) {}
+                    }
+                    if(jm == null) {
+                        let joinMessage = await sendJoinMessage(c);
+                        guildData.set(TicketBot.JOIN_MESSAGE_KEY, joinMessage.id);
+                        guildData.save();
+                    } else await updateJoinMessage(c, jm);
+                }
+            });
+        return null;
     }
-    joinCanal.toDJSCanal(guild)
-        .then(async (c: AnyChannel | null) => {
-            if(c != null && c instanceof TextChannel) {
-                let joinMessage = await sendJoinMessage(c);
-                guildData.set(TicketBot.JOIN_MESSAGE_KEY, joinMessage.id);
-                guildData.save();
-            }
-        });
-    return null;
 };
 async function sendJoinMessage(c: TextChannel): Promise<Message> {
     let messages = message(YamlMessage.JOIN_EMBED.DESC)
@@ -28,8 +39,11 @@ async function sendJoinMessage(c: TextChannel): Promise<Message> {
         .setDescription(messages.join("\n"))
         .setColor(<ColorResolvable>message(YamlMessage.JOIN_EMBED.COLOR));
     setFooter(embed, "Idk what to put here");
-return c.send({
-    embeds: [embed]
-});
+    return c.send({
+        embeds: [embed]
+    });
 }
-export {handler};
+async function updateJoinMessage(c: TextChannel, m: Message) {
+    // TODO: Section selection buttons
+}
+export = handler;

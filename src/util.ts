@@ -46,15 +46,21 @@ export function hasProperties(obj: any, props: string[]): boolean {
 }
 
 export function readFilesRecursivelySync(dir: string, callback: (path: string, content: string) => void): void {
+    let paths = getFilePathsRecursively(dir);
+    for(let path of paths) {
+        let content = fs.readFileSync(path, "utf8");
+        callback(path, content);
+    }
+}
+export function getFilePathsRecursively(dir: string): string[] {
+    let paths: string[] = [];
     let files = fs.readdirSync(dir);
     for(let file of files) {
         let path = dir + "/" + file;
         let stat = fs.statSync(path);
         if(stat.isDirectory()) {
-            readFilesRecursivelySync(path, callback);
-        } else {
-            let content = fs.readFileSync(path, "utf8");
-            callback(path, content);
-        }
+            paths.push(...getFilePathsRecursively(path));
+        } else paths.push(path);
     }
+    return paths;
 }

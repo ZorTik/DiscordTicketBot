@@ -17,6 +17,10 @@ import assert from "assert";
 import {Ticket, TicketData} from "./configuration/impl/data";
 import {ChannelTypes} from "discord.js/typings/enums";
 
+/**
+ * The main bot class.
+ * @author ZorTik
+ */
 export class TicketBot {
     public static JOIN_MESSAGE_KEY: string = "join-message";
     public static TICKET_IDS_KEY: string = "ticket-ids";
@@ -37,51 +41,71 @@ export class TicketBot {
         this.reloadHandlers = [];
         this.bot = bot;
     }
-    checkSetup(guildId: string): string | null {
-        let source = this.getGuildData(guildId);
-        if(source == null) return "Guild is not loaded!";
-        if(source.joinChannel.isEmpty()) {
-            return "Join canal is not set!";
-        } else if(source.ticketsCategory.isEmpty()) {
-            return "Tickets category is not set!";
+
+    /**
+     * Reloads the bot.
+     * @param guild_ The guild to reload bot in.
+     */
+    async reload(guild_: Guild | string | null = null): Promise<string | null> {
+        if(guild_ != null) {
+            let guild = await this.fetchGuild(guild_);
+            let guildData = guild != null? this.getGuildData(guild) : null;
+            if(guild == null || guildData == null) {
+                return "Guild is not loaded!";
+            }
+            if(!guildData.isComplete()) {
+                return "Setup is not completed.";
+            }
+            for(let reloadHandler of this.reloadHandlers) {
+                try {
+                    let err = await reloadHandler.onReload(guild, guildData);
+                    if(err != null) {
+                        return err;
+                    }
+                } catch(e) {
+                    return `An unexpected error occurred: ${e}`;
+                }
+            }
+        } else {
+            for(let guild of this.bot.guilds.cache.values()) {
+                let err = await this.reload(guild);
+                if(err != null) {
+                    logger.err(`Reload of guild '${guild.id}' failed: ${err}`);
+                }
+            }
         }
         return null;
     }
+
+    /**
+     * Performs setup tasks if setup is completed and sends a result
+     * message to the given channel.
+     * @param initChannel The channel to send the result message to.
+     */
     async runSetup(initChannel: TextChannel | null = null): Promise<string | null> {
         let guild: Guild;
         if(initChannel instanceof GuildChannel && (guild = initChannel.guild) != null) {
             const guildData = this?.getGuildData(guild);
             let clearErrMessage = await this.clearResources(guild, guildData);
-            if(clearErrMessage != null) return clearErrMessage;
+            if(clearErrMessage != null) {
+                return clearErrMessage;
+            }
             assert(guildData);
             let errMessage = this.checkSetup(guild.id);
-            if(errMessage != null) return errMessage;
+            if(errMessage != null) {
+                return errMessage;
+            }
             await this.reload(guild); // Apply changes
             return null;
         }
         return Promise.reject("Guild is not loaded!");
     }
-    async reload(guild_: Guild | string): Promise<string | null> {
-        let guild = await this.fetchGuild(guild_);
-        let guildData = guild != null? this.getGuildData(guild) : null;
-        if(guild == null || guildData == null) return "Guild is not loaded!";
-        if(!guildData.isComplete()) {
-            return "Setup is not completed.";
-        }
-        for (let reloadHandler of this.reloadHandlers) {
-            try {
-                let err = await reloadHandler(guild, guildData);
-                if(err != null) {
-                    logger.err(`Cannot reload guild ${guild.name}: ${err}`);
-                    return err;
-                }
-            } catch(e) {
-                logger.err(`Cannot reload guild ${guild.name}: ${e}`);
-                return "And unexpected error occurred.";
-            }
-        }
-        return null;
-    }
+
+    /**
+     * Makes new ticket channel and registers reference to it.
+     * @param guild The guild to create the channel in.
+     * @param requirements The requirements for the channel.
+     */
     async makeTicket(guild: Guild, requirements: TicketRequirements | TicketData): Promise<Ticket | string> {
         let guildData = this.getGuildData(guild);
         if(guildData == null || !guildData.isComplete()) {
@@ -117,26 +141,63 @@ export class TicketBot {
         }
         return ticket;
     }
+
+    /**
+     * Checks whether the setup is complete
+     * for given guild id.
+     * @param guildId The guild id.
+     */
+    checkSetup(guildId: string): string | null {
+        let source = this.getGuildData(guildId);
+        if(source == null) return "Guild is not loaded!";
+        if(source.joinChannel.isEmpty()) {
+            return "Join canal is not set!";
+        } else if(source.ticketsCategory.isEmpty()) {
+            return "Tickets category is not set!";
+        }
+        return null;
+    }
+
+    /**
+     * Performs stop tasks.
+     */
     stop() {
         logger.info("Stopping...");
         invokeStop();
         exit();
     }
+
+    /**
+     * Returns all saved ticket references.
+     * @param guildId
+     */
     getTickets(guildId: string): Ticket[] {
         return this.getGuildData(guildId)?.tickets?.data || [];
     }
+
+    /**
+     * Returns cached guild.
+     * @param guildId The guild id.
+     */
     getGuild(guildId: string): Guild | undefined {
         return this.bot.guilds.cache
             .filter(g => g.id === guildId)
             .first();
     }
+
+    /**
+     * Returns cached bot guild data.
+     * @param guild The guild.
+     */
     getGuildData(guild: Guild | string): Setup | null {
         let id = guild instanceof Guild?
             guild.id : guild as string;
         return <Setup | null>(this.guildData.has(id)?this.guildData.get(id) : null);
     }
     private async clearResources(guild: Guild, guildData: Setup | null | undefined): Promise<string | null> {
-        if(guildData == null) return "Guild is not loaded.";
+        if(guildData == null) {
+            return "Guild is not loaded.";
+        }
         const joinCanal: Canal = guildData.joinChannel;
         const mid = guildData.get(TicketBot.JOIN_MESSAGE_KEY);
         if(mid != null && joinCanal.isPresent()) {
@@ -200,5 +261,5 @@ export type TicketRequirements = {
     creatorId: string;
 }
 export type ReloadHandler = {
-    (guild: Guild, data: Setup): Promise<string | null>;
+    onReload: (guild: Guild, data: Setup) => Promise<string | null>;
 };
