@@ -39,13 +39,19 @@ rest.setToken(<string>token.get());
 let commands = [
     new SlashCommandBuilder()
         .setName("tickets")
-        .setDescription("All commands for Ticket Bot.")
+        .setDescription("General commands for Ticket Bot.")
         .addSubcommand(new SlashCommandSubcommandBuilder()
             .setName("setup")
             .setDescription("Performs setup check and offers some actions to take."))
         .addSubcommand(new SlashCommandSubcommandBuilder()
             .setName("reload")
-            .setDescription("Reloads the bot."))
+            .setDescription("Reloads the bot.")),
+    new SlashCommandBuilder()
+        .setName("ticket")
+        .setDescription("Ticket/User in ticket manipulation commands.")
+        .addSubcommand(new SlashCommandSubcommandBuilder()
+            .setName("admin")
+            .setDescription("Ticket administration."))
 ];
 client.on('ready', (e: ClientEvents) => {
     const ts = new Date();

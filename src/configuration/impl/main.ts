@@ -29,4 +29,5 @@ export type TicketCategory = {
     identifier: string;
     name: string;
     description: string;
+    info: string;
 }

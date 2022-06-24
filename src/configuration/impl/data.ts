@@ -1,8 +1,18 @@
 import {Canal, JsonFileMap, ValOpt} from "../index";
 import {KeyValueStorage} from "../../util";
 import {TicketBot, TicketRequirements} from "../../bot";
-import {Guild, GuildMember, User} from "discord.js";
-import {bot} from "../../app";
+import {
+    Guild,
+    GuildChannel,
+    GuildMember,
+    MessageEmbed,
+    NonThreadGuildBasedChannel,
+    TextChannel,
+    User
+} from "discord.js";
+import {bot, config, logger} from "../../app";
+import {COLOR_INFO} from "../../const";
+import {TicketCategory} from "./main";
 
 export class TicketBotData extends KeyValueStorage<string, any> {
     readonly source: JsonFileMap;
@@ -105,9 +115,9 @@ export class Ticket extends Canal {
         this.canalId = ticketData.canalId;
         this.ticketData = ticketData;
     }
-    async runSetup(guild: Guild): Promise<string | null> {
-        let channel = await guild.channels.fetch(this.canalId);
-        if(channel == null) {
+    async runSetup(): Promise<string | null> {
+        let channel = await this.fetchChannel();
+        if(channel == null || !channel.isText()) {
             return "Channel of the ticket is not present!";
         }
         let userIds = [...this.ticketData.userIds, this.ticketData.creatorId];
@@ -116,10 +126,52 @@ export class Ticket extends Canal {
                 VIEW_CHANNEL: true,
             });
         });
+        let category = config.getCategory(this.ticketData.categoryId);
+        let author: GuildMember | null = null;
+        try {
+            author = await channel.guild.members.fetch(this.ticketData.creatorId)
+        } catch(ignored) {}
+        await channel.send({
+            embeds: [
+                new MessageEmbed()
+                    .setColor(COLOR_INFO)
+                    .setTitle(category.mapIfPresent(c => c.name) || "Unknown Category")
+                    .setDescription(category.mapIfPresent(c => c.info
+                        .replaceAll("%n", "\n")) || "No description info.")
+            ],
+            content: author?.toString()
+        });
         return null;
+    }
+    async delete(): Promise<boolean> {
+        let guild = bot.getGuild(this.guildId);
+        if(guild == null) return false;
+        let channel = await guild.channels.fetch(this.canalId);
+        if(channel != null) {
+            try {
+                await channel.delete();
+            } catch(err) {
+                logger.err(`Cannot delete ticket channel ${this.canalId} on server ${this.guildId} (${guild.name}): ${err}`);
+                return false;
+            }
+        }
+        let tickets = this.botData.tickets;
+        if(tickets != null) {
+            tickets.remove(this);
+            this.botData.save();
+        }
+        return true;
     }
     getUsers(): TicketUser[] {
         return this.ticketData.userIds.map(this.botData.getUser);
+    }
+    getCategory(): ValOpt<TicketCategory> {
+        return config.getCategory(this.ticketData.categoryId);
+    }
+    async fetchChannel(): Promise<NonThreadGuildBasedChannel | null> {
+        let guild = bot.getGuild(this.guildId);
+        if(guild == null) return null;
+        return await guild.channels.fetch(this.canalId);
     }
 }
 

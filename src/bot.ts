@@ -7,7 +7,7 @@ import {
     GuildChannel,
     Message,
     NonThreadGuildBasedChannel,
-    Snowflake,
+    Snowflake, TextBasedChannel,
     TextChannel
 } from "discord.js";
 import {client, config, exit, invokeStop, logger} from "./app";
@@ -145,7 +145,7 @@ export class TicketBot {
             creatorId: creator.id,
             userIds: ((<TicketUsersRequirements>requirements).userIds) || []
         });
-        let errorMessage = await ticket.runSetup(guild);
+        let errorMessage = await ticket.runSetup();
         if(errorMessage != null) {
             await ticketChannel.delete();
             let ticketCache = guildData.tickets;
@@ -178,6 +178,28 @@ export class TicketBot {
         logger.info("Stopping...");
         invokeStop();
         exit();
+    }
+
+    /**
+     * Checks if given channel is registered as ticket channel.
+     * @param channel The channel to check.
+     */
+    isTicketChannel(channel: AnyChannel): boolean {
+        if(!(channel instanceof TextChannel)) {
+            return false;
+        }
+        let guildId = channel.guild.id;
+        return this.getTickets(guildId).some(t => t.canalId === channel.id);
+    }
+
+    /**
+     * Tries to find ticket by given guild id and channel id.
+     * @param guildId The guild id.
+     * @param channel The channel id.
+     */
+    getTicket(guildId: string, channel: AnyChannel): Ticket | undefined {
+        if(!this.isTicketChannel(channel)) return undefined;
+        return this.getTickets(guildId).find(t => t.canalId === (<TextChannel>channel).id);
     }
 
     /**
@@ -219,14 +241,9 @@ export class TicketBot {
                 await TicketBot.deleteInChannel(djsC, mid);
             }
         }
-        let ids = guildData.getTicketIds();
-        for (let id in ids) {
-            this.bot.channels.fetch(id)
-                .then(c => {
-                    if(c != null && c.isText()) {
-                        c.delete();
-                    }
-                })
+        let tickets = this.getTickets(guild.id);
+        for(let ticket of tickets) {
+            await ticket.delete();
         }
         guildData.tickets?.splice(0, guildData.tickets?.length);
         guildData.save();

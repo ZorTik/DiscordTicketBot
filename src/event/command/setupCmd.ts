@@ -9,6 +9,7 @@ import {setFooter} from "../../util/index";
 import {bot, message, messages} from "../../app";
 import {isExactCommand, reply, replySuccess} from "../../util";
 import {YamlMessage} from "../../configuration/impl/messages";
+import {COLOR_ERROR, COLOR_SUCCESS} from "../../const";
 const CHECK_SELECT_MENU_ID = "setup-check-select-menu";
 export = {
     on: 'interactionCreate',
@@ -63,11 +64,11 @@ export = {
             if(!setupData.isComplete()) {
                 embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.INCOMPLETE.TITLE));
                 embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.INCOMPLETE.DESC));
-                embedBuilder.setColor("#00ff99");
+                embedBuilder.setColor(COLOR_ERROR);
             } else {
                 embedBuilder.setTitle(message(YamlMessage.SETUP_EMBED.COMPLETE.TITLE));
                 embedBuilder.setDescription(message(YamlMessage.SETUP_EMBED.COMPLETE.DESC));
-                embedBuilder.setColor("#ff0044");
+                embedBuilder.setColor(COLOR_SUCCESS);
             }
             let ind = 0;
             const fields: EmbedFieldData[] = SetupPart.vals()

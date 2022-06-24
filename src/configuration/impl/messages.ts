@@ -29,6 +29,7 @@ export class YamlMessage<T> {
     static JOIN_CANAL_SET = new YamlMessage("join_canal_set", "Join canal has been successfully set!");
     static TICKETS_CATEGORY_SET = new YamlMessage("tickets_category_set", "Tickets category has been successfully set!");
     static NOT_CHILD_CHANNEL = new YamlMessage("not_child_channel", "This message is not in a child text channel!");
+    static NOT_TICKET_CHANNEL = new YamlMessage("not_ticket_channel", "This message is not in a ticket channel!");
     static SETUP_FINISH = new YamlMessage("setup_finish", "Ticket Bot is set up correctly and can be used now!");
     static SETUP_INCOMPLETE = new YamlMessage("setup_incomplete", "You need to set up everything before you can finish the setup! Error: %err");
     static TICKET_CREATED = new YamlMessage("ticket_created", "Ticket {} has been successfully created!%nPlease click on the link on this message to head up to your ticket and submit requirements.");

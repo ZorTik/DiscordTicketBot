@@ -3,12 +3,11 @@ import {appGuildCommands} from "./routes";
 import {logger, rest} from "../app";
 import {SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder} from "@discordjs/builders";
 
-export function setFooter(embed: MessageEmbed, info: string) {
+export function setFooter(embed: MessageEmbed, info: string = "") {
     const date = new Date();
-    embed.setFooter(date.getUTCDay()
+    embed.setFooter((info.length > 0 ? info + " | " : "") + date.getUTCDay()
         + ". " + date.getUTCMonth()
-        + " " + date.getUTCFullYear()
-        + " | " + info);
+        + " " + date.getUTCFullYear());
 }
 export function registerCommands(g: Guild, commands: SlashCommandBuilder[] | SlashCommandSubcommandsOnlyBuilder[]) {
     rest.put(appGuildCommands(g), {
