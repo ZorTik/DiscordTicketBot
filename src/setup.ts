@@ -16,6 +16,7 @@ export class Setup extends TicketBotData {
     }
 }
 export class SetupPart {
+    // Setup parts
     public static JOIN_CANAL = new SetupPart("Join Canal",
         function(data: Setup): boolean {return data.joinChannel.isPresent()});
     public static TICKETS_SECTION = new SetupPart("Tickets Category",

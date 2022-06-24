@@ -5,6 +5,7 @@ import {
     MessageEmbed,
     MessagePayload
 } from "discord.js";
+import * as fs from "fs";
 
 export interface Optional<T> {
     value: T | null;
@@ -42,4 +43,18 @@ export function hasProperties(obj: any, props: string[]): boolean {
         if(!obj.hasOwnProperty(prop)) return false;
     }
     return true;
+}
+
+export function readFilesRecursivelySync(dir: string, callback: (path: string, content: string) => void): void {
+    let files = fs.readdirSync(dir);
+    for(let file of files) {
+        let path = dir + "/" + file;
+        let stat = fs.statSync(path);
+        if(stat.isDirectory()) {
+            readFilesRecursivelySync(path, callback);
+        } else {
+            let content = fs.readFileSync(path, "utf8");
+            callback(path, content);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 import {MainConfiguration} from "./configuration/impl/main";
 import {ApplicationCommand, ClientEvents, Guild, Snowflake} from "discord.js";
-import {TicketBot} from "./bot";
+import {ReloadHandler, TicketBot} from "./bot";
 import * as fs from "fs";
 import {SlashCommandBuilder, SlashCommandSubcommandBuilder} from "@discordjs/builders";
 import {REST, RouteLike} from "@discordjs/rest";
@@ -9,7 +9,7 @@ import {appGuildCommands} from "./util/routes";
 import {registerCommands} from "./util/index";
 import {JsonFileMap} from "./configuration";
 import {YamlMessage, MessagesConfiguration} from "./configuration/impl/messages";
-import {hasProperties} from "./util";
+import {hasProperties, readFilesRecursivelySync} from "./util";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -93,7 +93,12 @@ fs.readdir("src/event", (err, files) => {
 });
 let dataPath = "./data.json";
 if(!fs.existsSync(dataPath)) {
-    exit("File data.json does not exist!");
+    logger.info("File data.json does not exist! Creating a new one...");
+    try {
+        fs.writeFileSync(dataPath, "{}")
+    } catch(e) {
+        exit("Cannot create data.json! Error: " + e);
+    }
 }
 try {
     client.login(token.get())
@@ -109,6 +114,14 @@ try {
                     });
                     registerCommands(g, toReg);
                 });
+            readFilesRecursivelySync("./reload-handlers", (path) => {
+                import(path).then(h => {
+                    let rh = (<ReloadHandler>h);
+                    if(rh != null) {
+                        bot.reloadHandlers.push(rh);
+                    }
+                });
+            });
         });
 } catch (e) {
     exit("Cannot login client: " + (e as Error).message)

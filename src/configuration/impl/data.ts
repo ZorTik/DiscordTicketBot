@@ -73,49 +73,11 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         this.source.setByKey(this.guildId, data);
     }
 }
-export class SavedCanal extends Canal {
-    private readonly ref: TicketBotData;
-    private readonly key: string | null;
-    constructor(ref: TicketBotData, key: string | null = null) {
-        super();
-        this.ref = ref;
-        this.key = key;
-    }
-    save() {
-        let data = this.ref.data;
-        if(data != null && this.key != null) {
-            data[this.key] = this.get() as string;
-        }
-    }
-    load() {
-        let data = this.ref.data;
-        if(this.key != null && data.hasOwnProperty(this.key)) {
-            this.value = data[this.key] as string;
-        }
-    }
-    set set(newId: string) {
-        if(this.key != null) {
-            this.ref.set(this.key, newId);
-        }
-        super.set = newId;
-    }
-}
-export class TicketUser {
-    private readonly memberId: string;
-    constructor(memberId: string) {
-        this.memberId = memberId;
-    }
-    get getMemberId(): string {
-        return this.memberId;
-    }
-    async toDJSMember(g: Guild): Promise<GuildMember> {
-        return g.members.fetch(this.memberId);
-    }
-}
+
 export type TicketData = {
     canalId: string;
-    userIds: string[];
     creatorId: string;
+    userIds: string[];
 }
 export class Ticket extends Canal {
 
@@ -157,6 +119,47 @@ export class Ticket extends Canal {
     }
     getUsers(): TicketUser[] {
         return this.ticketData.userIds.map(this.botData.getUser);
+    }
+}
+
+export class TicketUser {
+    private readonly memberId: string;
+    constructor(memberId: string) {
+        this.memberId = memberId;
+    }
+    get getMemberId(): string {
+        return this.memberId;
+    }
+    async toDJSMember(g: Guild): Promise<GuildMember> {
+        return g.members.fetch(this.memberId);
+    }
+}
+
+export class SavedCanal extends Canal {
+    private readonly ref: TicketBotData;
+    private readonly key: string | null;
+    constructor(ref: TicketBotData, key: string | null = null) {
+        super();
+        this.ref = ref;
+        this.key = key;
+    }
+    save() {
+        let data = this.ref.data;
+        if(data != null && this.key != null) {
+            data[this.key] = this.get() as string;
+        }
+    }
+    load() {
+        let data = this.ref.data;
+        if(this.key != null && data.hasOwnProperty(this.key)) {
+            this.value = data[this.key] as string;
+        }
+    }
+    set set(newId: string) {
+        if(this.key != null) {
+            this.ref.set(this.key, newId);
+        }
+        super.set = newId;
     }
 }
 

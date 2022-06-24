@@ -3,11 +3,9 @@ import {
     AnyChannel,
     CategoryChannel,
     Client,
-    ColorResolvable,
     Guild,
     GuildChannel,
     Message,
-    MessageEmbed,
     NonThreadGuildBasedChannel,
     Snowflake,
     TextChannel
@@ -15,8 +13,6 @@ import {
 import {client, exit, invokeStop, logger, message} from "./app";
 import {Canal, JsonFileMap} from "./configuration";
 import {DefaultLogger} from "./logging";
-import {YamlMessage} from "./configuration/impl/messages";
-import {setFooter} from "./util/index";
 import assert from "assert";
 import {Ticket, TicketData} from "./configuration/impl/data";
 import {ChannelTypes} from "discord.js/typings/enums";
@@ -30,6 +26,7 @@ export class TicketBot {
     private readonly bot: Client;
     private readonly logger: DefaultLogger;
     private readonly storage: JsonFileMap;
+    readonly reloadHandlers: ReloadHandler[];
     constructor(storage: JsonFileMap, bot: Client = client, _logger: DefaultLogger = logger) {
         this.logger = _logger;
         this.storage = storage;
@@ -37,6 +34,7 @@ export class TicketBot {
         bot.guilds.cache.forEach((g: Guild, key: Snowflake) => {
             this.initGuildData(key);
         });
+        this.reloadHandlers = [];
         this.bot = bot;
     }
     checkSetup(guildId: string): string | null {
@@ -58,21 +56,31 @@ export class TicketBot {
             assert(guildData);
             let errMessage = this.checkSetup(guild.id);
             if(errMessage != null) return errMessage;
-            let joinCanal = guildData.joinChannel;
-            if(!guildData.isComplete() || !joinCanal.isPresent()) {
-                return "Something went wrong.";
-            }
-            joinCanal.toDJSCanal(guild, this.bot)
-                .then(async (c: AnyChannel | null) => {
-                    if(c != null && c instanceof TextChannel) {
-                        let joinMessage = await this.sendJoinMessage(c);
-                        guildData.set(TicketBot.JOIN_MESSAGE_KEY, joinMessage.id);
-                        guildData.save();
-                    }
-                })
+            await this.reload(guild); // Apply changes
             return null;
         }
         return Promise.reject("Guild is not loaded!");
+    }
+    async reload(guild_: Guild | string): Promise<string | null> {
+        let guild = await this.fetchGuild(guild_);
+        let guildData = guild != null? this.getGuildData(guild) : null;
+        if(guild == null || guildData == null) return "Guild is not loaded!";
+        if(!guildData.isComplete()) {
+            return "Setup is not completed.";
+        }
+        for (let reloadHandler of this.reloadHandlers) {
+            try {
+                let err = await reloadHandler(guild, guildData);
+                if(err != null) {
+                    logger.err(`Cannot reload guild ${guild.name}: ${err}`);
+                    return err;
+                }
+            } catch(e) {
+                logger.err(`Cannot reload guild ${guild.name}: ${e}`);
+                return "And unexpected error occurred.";
+            }
+        }
+        return null;
     }
     async makeTicket(guild: Guild, requirements: TicketRequirements | TicketData): Promise<Ticket | string> {
         let guildData = this.getGuildData(guild);
@@ -161,17 +169,9 @@ export class TicketBot {
         let guild = channel.guild;
         return guild != null ? action(guild, channel) : null;
     }
-    private async sendJoinMessage(c: TextChannel): Promise<Message> {
-        let messages = message(YamlMessage.JOIN_EMBED.DESC)
-            .split("%n");
-        const embed = new MessageEmbed()
-            .setTitle(message(YamlMessage.JOIN_EMBED.TITLE))
-            .setDescription(messages.join("\n"))
-            .setColor(<ColorResolvable>message(YamlMessage.JOIN_EMBED.COLOR));
-        setFooter(embed, "Idk what to put here");
-        return c.send({
-            embeds: [embed]
-        });
+    private async fetchGuild(guild: Guild | string): Promise<Guild | null> {
+        if(guild instanceof Guild) return guild;
+        return this.bot.guilds.fetch(guild as string);
     }
     private static deleteInChannel(channel: AnyChannel, id: string): Promise<any> {
         if(channel.isText()) {
@@ -184,7 +184,6 @@ export class TicketBot {
                 });
         } else if(channel instanceof CategoryChannel) {
             channel = <CategoryChannel>channel;
-            let member = null;
             let cToDel = Array.from(channel.children.values())
                 .find((c: NonThreadGuildBasedChannel) => {
                     return c.id === id && c.deletable;
@@ -200,3 +199,6 @@ export type TicketRequirements = {
     userIds: string[];
     creatorId: string;
 }
+export type ReloadHandler = {
+    (guild: Guild, data: Setup): Promise<string | null>;
+};
