@@ -1,1 +1,18 @@
-token: "OTU2NTIxOTQ2MTA1OTEzNDA0.GOn5vV.aVRbrY4nWFTovSQYW6SGdPx9QsYGq9bBFENzgE"
+token: "OTU2NTIxOTQ2MTA1OTEzNDA0.GurEPO.9we8bn3RGkvEX9T6WtH90x6v_L8c6KAC4bTaNA"
+categories:
+  general:
+    name: "General Questions"
+    description: "General questions about the server."
+    info: "Please describe your question about the server."
+  reports:
+    name: "Member Reports"
+    description: "All reports regarding users."
+    info: "Please include these points in your report:%n%n- Discord account of the member%n- When did ti happen%n- Evidence materials%n%nYour report will be discarded if it does not contain those requirements mentioned above."
+  bugs:
+    name: "Bug Reports"
+    description: "All reports regarding bugs found on the server."
+    info: "Please describe the bug you've found in detail and include evidence materials."
+  other:
+    name: "Other Problems"
+    description: "Problems that didn't match any other categories."
+    info: "Please describe your problem in detail."

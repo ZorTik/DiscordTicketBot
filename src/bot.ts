@@ -4,29 +4,26 @@ import {
     CategoryChannel,
     Client,
     Guild,
-    GuildChannel,
+    GuildChannel, GuildMember, Interaction,
     Message,
-    NonThreadGuildBasedChannel,
-    Snowflake, TextBasedChannel,
-    TextChannel
+    NonThreadGuildBasedChannel, Snowflake, TextChannel
 } from "discord.js";
-import {client, config, exit, invokeStop, logger} from "./app";
+import {bot, client, config, exit, invokeStop, logger} from "./app";
 import {Canal, JsonFileMap} from "./configuration";
 import {DefaultLogger} from "./logging";
 import assert from "assert";
 import {Ticket} from "./configuration/impl/data";
 import {ChannelTypes} from "discord.js/typings/enums";
-import {HasIdentity} from "./types";
+import {HasIdentity, HasName, Nullable} from "./types";
+import {groups} from "./api/permission";
+import {isAdmin, replyError, ReplyInteraction} from "./util";
+import {JOIN_MESSAGE_KEY} from "./const";
 
 /**
  * The main bot class.
  * @author ZorTik
  */
 export class TicketBot {
-
-    public static JOIN_MESSAGE_KEY: string = "join-message";
-    public static TICKET_IDS_KEY: string = "ticket-ids";
-    public static USER_IDS_KEY: string = "user-ids";
 
     private readonly guildData: Map<string, Setup>;
     private readonly bot: Client;
@@ -46,10 +43,11 @@ export class TicketBot {
     }
 
     /**
-     * Reloads the bot.
+     * Reloads the bot or specific portion of reload handlers.
      * @param guild_ The guild to reload bot in.
+     * @param handlerIds The handler ids to reload.
      */
-    async reload(guild_: Guild | string | null = null, handlerIds: string[] = []): Promise<string | null> {
+    async reload(guild_: Guild | string | null = null, handlerIds: string[] = []): Promise<Nullable<string>> {
         if(guild_ != null) {
             let guild = await this.fetchGuild(guild_);
             let guildData = guild != null? this.getGuildData(guild) : null;
@@ -89,7 +87,7 @@ export class TicketBot {
      * message to the given channel.
      * @param initChannel The channel to send the result message to.
      */
-    async runSetup(initChannel: TextChannel | null = null): Promise<string | null> {
+    async runSetup(initChannel: TextChannel | null = null): Promise<Nullable<string>> {
         let guild: Guild;
         if(initChannel instanceof GuildChannel && (guild = initChannel.guild) != null) {
             const guildData = this?.getGuildData(guild);
@@ -160,7 +158,7 @@ export class TicketBot {
      * for given guild id.
      * @param guildId The guild id.
      */
-    checkSetup(guildId: string): string | null {
+    checkSetup(guildId: string): Nullable<string> {
         let source = this.getGuildData(guildId);
         if(source == null) return "Guild is not loaded!";
         if(source.joinChannel.isEmpty()) {
@@ -190,6 +188,23 @@ export class TicketBot {
         }
         let guildId = channel.guild.id;
         return this.getTickets(guildId).some(t => t.canalId === channel.id);
+    }
+
+
+    /**
+     * Checks if given guild member has permission node.
+     * This method creates new user reference if does not exist.
+     * @param member The member to check.
+     * @param nodeId The node id.
+     */
+    hasPermission(member: GuildMember, nodeId: string): boolean {
+        if(isAdmin(member)) {
+            return true;
+        }
+        let guild = member.guild;
+        let guildData = this.getGuildData(guild);
+        let ticketUser = guildData?.getUser(member.id);
+        return ticketUser?.hasPermissionNode(nodeId) || false;
     }
 
     /**
@@ -224,17 +239,17 @@ export class TicketBot {
      * Returns cached bot guild data.
      * @param guild The guild.
      */
-    getGuildData(guild: Guild | string): Setup | null {
+    getGuildData(guild: Guild | string): Nullable<Setup> {
         let id = guild instanceof Guild?
             guild.id : guild as string;
         return <Setup | null>(this.guildData.has(id)?this.guildData.get(id) : null);
     }
-    private async clearResources(guild: Guild, guildData: Setup | null | undefined): Promise<string | null> {
+    private async clearResources(guild: Guild, guildData: Setup | null | undefined): Promise<Nullable<string>> {
         if(guildData == null) {
             return "Guild is not loaded.";
         }
         const joinCanal: Canal = guildData.joinChannel;
-        const mid = guildData.get(TicketBot.JOIN_MESSAGE_KEY);
+        const mid = guildData.get(JOIN_MESSAGE_KEY);
         if(mid != null && joinCanal.isPresent()) {
             let djsC;
             if((djsC = await joinCanal.toDJSCanal(guild, this.bot)) != null) {
@@ -256,11 +271,11 @@ export class TicketBot {
     private doIfCanalMember(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => any) {
         this.supplyIfCanalMember(channel, action);
     }
-    private supplyIfCanalMember<T>(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => T | null): T | null {
+    private supplyIfCanalMember<T>(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => Nullable<T>): T | null {
         let guild = channel.guild;
         return guild != null ? action(guild, channel) : null;
     }
-    private async fetchGuild(guild: Guild | string): Promise<Guild | null> {
+    private async fetchGuild(guild: Guild | string): Promise<Nullable<Guild>> {
         if(guild instanceof Guild) return guild;
         return this.bot.guilds.fetch(guild as string);
     }
@@ -286,6 +301,65 @@ export class TicketBot {
         return new Promise<unknown>(() => null);
     }
 }
+
+export class PermissionHolder {
+
+    readonly permissions: PermissionContext;
+    readonly groups: string[];
+
+    constructor(permissions: PermissionNode[] = [], groups: string[] = []) {
+        this.permissions = {
+            nodes: permissions
+        }
+        this.groups = groups;
+    }
+
+    /**
+     * Checks if this permission holder contains
+     * node with given id. The id can be either:
+     * - Node ID
+     * - Permission string
+     * @param id The id to check.
+     */
+    hasPermissionNode(id: string): boolean {
+        return this.hasPermissionNodeInContext(id, this.permissions)
+            || this.getPermissionGroups().some(g => this.hasPermissionNodeInContext(id, g));
+    }
+
+    getPermissionGroups(): PermissionGroup[] {
+        return groups().filter(g => this.groups.includes(g.id));
+    }
+
+    private hasPermissionNodeInContext(id: string, context: PermissionContext): boolean {
+        return context.nodes
+            .some(n => {
+                let c = <HasIdentity & PermissionContext>n;
+                let contextId = c.id;
+                return (contextId != null && (contextId === id || this.hasPermissionNodeInContext(id, c)))
+                    || (contextId == null && id === n);
+            });
+    }
+
+}
+
+export async function doIfHasPermission(interaction: ReplyInteraction, nodeId: string, task: (member: GuildMember) => Promise<void> | void) {
+    let member = interaction.member;
+    if(member == null || !(member instanceof GuildMember) || !bot.hasPermission(member, nodeId)) {
+        await replyError(interaction, "You don't have permission to do this.");
+        return;
+    }
+    let res = task(member);
+    if(res instanceof Promise) {
+        await res;
+    }
+}
+
+export type PermissionContext = {
+    nodes: PermissionNode[];
+}
+export type PermissionGroup = (HasIdentity & HasName & PermissionContext);
+export type PermissionNode = PermissionGroup | string;
+
 export type TicketUsersRequirements = {
     userIds: string[];
 }
@@ -298,5 +372,5 @@ export type TicketRequirements = {
 export type ReloadHandler = ReloadHandlerEvent | (HasIdentity & ReloadHandlerEvent);
 
 type ReloadHandlerEvent = {
-    onReload: (guild: Guild, data: Setup) => Promise<string | null>;
+    onReload: (guild: Guild, data: Setup) => Promise<Nullable<string>>;
 }

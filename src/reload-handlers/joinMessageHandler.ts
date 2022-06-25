@@ -13,7 +13,7 @@ import {config, message} from "../app";
 import {YamlMessage} from "../configuration/impl/messages";
 import {setFooter} from "../util/index";
 import {TicketBotData} from "../configuration/impl/data";
-import {CATEGORIES_DROPDOWN_ID} from "../const";
+import {CATEGORIES_DROPDOWN_ID, JOIN_MESSAGE_KEY} from "../const";
 
 const handler: ReloadHandler = {
     id: "joinMessageHandler",
@@ -25,11 +25,11 @@ const handler: ReloadHandler = {
         joinCanal.toDJSCanal(guild)
             .then(async (c: AnyChannel | null) => {
                 if(c != null && c instanceof TextChannel) {
-                    let mId = guildData.get(TicketBot.JOIN_MESSAGE_KEY);
+                    let mId = guildData.get(JOIN_MESSAGE_KEY);
                     let jm: Message | null = null;
                     if(mId != null) {
                         try {
-                            jm = await c.messages.fetch(guildData.get(TicketBot.JOIN_MESSAGE_KEY), {
+                            jm = await c.messages.fetch(guildData.get(JOIN_MESSAGE_KEY), {
                                 cache: false
                             });
                         } catch(ignored) {}
@@ -44,7 +44,7 @@ const handler: ReloadHandler = {
 };
 async function sendJoinMessage(c: TextChannel, guildData: TicketBotData): Promise<Message> {
     let joinMessage = await c.send(buildJoinPayload(c));
-    guildData.set(TicketBot.JOIN_MESSAGE_KEY, joinMessage.id);
+    guildData.set(JOIN_MESSAGE_KEY, joinMessage.id);
     guildData.save();
     guildData.reload();
     return joinMessage;

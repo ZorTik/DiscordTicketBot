@@ -1,11 +1,11 @@
 import {
-    CommandInteraction,
+    CommandInteraction, GuildMember,
     Interaction,
     InteractionReplyOptions,
     MessageActionRow,
     MessageComponentInteraction,
     MessageEmbed,
-    MessagePayload
+    MessagePayload, Permissions
 } from "discord.js";
 import * as fs from "fs";
 import {ReloadHandler} from "./bot";
@@ -24,7 +24,7 @@ export abstract class KeyValueStorage<K, V> {
         return this.get(key) != null;
     }
 }
-type ReplyInteraction = MessageComponentInteraction | CommandInteraction;
+export type ReplyInteraction = MessageComponentInteraction | CommandInteraction;
 export async function replySuccess(interaction: ReplyInteraction, text: string, ephemeral: boolean = true) {
     return reply(interaction, new MessageEmbed()
         .setTitle("✓ Success!")
@@ -100,4 +100,8 @@ export function isExactCommand(interaction: Interaction, cmdUrl: string): boolea
         }
     }
     return true;
+}
+
+export function isAdmin(member: GuildMember): boolean {
+    return member.permissions.has(Permissions.FLAGS.ADMINISTRATOR);
 }

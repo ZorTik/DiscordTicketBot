@@ -1,17 +1,17 @@
 import {Canal, JsonFileMap, ValOpt} from "../index";
 import {KeyValueStorage} from "../../util";
-import {TicketBot, TicketRequirements} from "../../bot";
+import {PermissionContext, PermissionHolder, TicketBot, TicketRequirements} from "../../bot";
 import {
     Guild,
     GuildChannel,
     GuildMember,
     MessageEmbed,
-    NonThreadGuildBasedChannel,
+    NonThreadGuildBasedChannel, Permissions,
     TextChannel,
     User
 } from "discord.js";
 import {bot, config, logger} from "../../app";
-import {COLOR_INFO} from "../../const";
+import {COLOR_INFO, TICKET_IDS_KEY, USER_IDS_KEY} from "../../const";
 import {TicketCategory} from "./main";
 
 export class TicketBotData extends KeyValueStorage<string, any> {
@@ -47,9 +47,9 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         }
         this.joinChannel.load();
         this.ticketsCategory.load();
-        this.tickets = new SavedCollection<Ticket>(this.data, TicketBot.TICKET_IDS_KEY,
+        this.tickets = new SavedCollection<Ticket>(this.data, TICKET_IDS_KEY,
             (data) => Ticket.saveIfAbsent(this, data), (ticket) => ticket.ticketData);
-        this.users = new SavedCollection<TicketUser>(this.data, TicketBot.USER_IDS_KEY);
+        this.users = new SavedCollection<TicketUser>(this.data, USER_IDS_KEY);
     }
     getUser(memberId: string): TicketUser {
         if(this.users == null) {
@@ -175,11 +175,35 @@ export class Ticket extends Canal {
     }
 }
 
-export class TicketUser {
+export class TicketUser extends PermissionHolder {
     private readonly memberId: string;
     constructor(memberId: string) {
+        super();
         this.memberId = memberId;
     }
+
+    /**
+     * Checks if this user has specific permission or
+     * permission group. Difference between this method
+     * and PermissionHolder.hasPermissionNode is that
+     * this method checks if the user has administrator
+     * permissions on the server.
+     * @param id The permission or permission context id
+     * @param guild The guild to check the permission on
+     */
+    async hasPermissionOnGuild(id: string, guild: Guild | string | undefined): Promise<boolean> {
+        if(typeof guild === "string") {
+            guild = bot.getGuild(guild);
+        }
+        if(guild !== undefined) {
+            let member = await guild.members.fetch(this.memberId);
+            if(member != null && member.permissions.has(Permissions.FLAGS.ADMINISTRATOR)) {
+                return true;
+            }
+        }
+        return super.hasPermissionNode(id);
+    }
+
     get getMemberId(): string {
         return this.memberId;
     }
