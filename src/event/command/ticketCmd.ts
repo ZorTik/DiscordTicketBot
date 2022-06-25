@@ -4,10 +4,10 @@ import {setFooter} from "../../util/index";
 import {bot, message} from "../../app";
 import {YamlMessage} from "../../configuration/impl/messages";
 import {COLOR_SUCCESS, TICKET_ADMIN_DROPDOWN_ID} from "../../const";
-import {Ticket} from "../../configuration/impl/data";
 import {doIfHasPermission} from "../../permissions";
 import {PERMISSIONS} from "../../api/permission";
 import assert from "assert";
+import {Ticket} from "../../bot";
 
 export = {
     on: 'interactionCreate',

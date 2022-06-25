@@ -5,18 +5,20 @@ import {
     Client,
     Guild,
     GuildChannel, GuildMember, Interaction,
-    Message,
-    NonThreadGuildBasedChannel, Snowflake, TextChannel
+    Message, MessageEmbed,
+    NonThreadGuildBasedChannel, Permissions, Snowflake, TextChannel
 } from "discord.js";
 import {bot, client, config, exit, invokeStop, logger} from "./app";
-import {Canal, JsonFileMap} from "./configuration";
+import {Canal, JsonFileMap, ValOpt} from "./configuration";
 import {DefaultLogger} from "./logging";
 import assert from "assert";
-import {Ticket} from "./configuration/impl/data";
+import {TicketBotData} from "./configuration/impl/data";
 import {ChannelTypes} from "discord.js/typings/enums";
 import {HasIdentity, HasName, Nullable} from "./types";
 import {isAdmin, replyError, ReplyInteraction} from "./util";
-import {JOIN_MESSAGE_KEY} from "./const";
+import {COLOR_INFO, JOIN_MESSAGE_KEY} from "./const";
+import {TicketCategory} from "./configuration/impl/main";
+import {PermissionHolder} from "./permissions";
 
 /**
  * The main bot class.
@@ -299,6 +301,134 @@ export class TicketBot {
             }
         }
         return new Promise<unknown>(() => null);
+    }
+}
+
+export type TicketData = {
+    canalId: string;
+    categoryId: string,
+    creatorId: string;
+    userIds: string[];
+}
+export class Ticket extends Canal {
+
+    static async make(guild: Guild, requirements: TicketRequirements): Promise<Ticket | string> {
+        return bot.makeTicket(guild, requirements);
+    }
+    static saveIfAbsent(data: TicketBotData, ticketData: TicketData): Ticket {
+        let ticket = new Ticket(data, ticketData);
+        if(!data.getTicketIds().some(id => id === ticket.canalId)) {
+            data.tickets?.push(ticket);
+            data.save();
+        }
+        return ticket;
+    }
+
+    private botData: TicketBotData;
+    readonly guildId: string;
+    readonly canalId: string;
+    readonly ticketData: TicketData;
+    private constructor(data: TicketBotData, ticketData: TicketData) {
+        super(ticketData.canalId);
+        this.botData = data;
+        this.guildId = data.guildId;
+        this.canalId = ticketData.canalId;
+        this.ticketData = ticketData;
+    }
+    async runSetup(): Promise<string | null> {
+        let channel = await this.fetchChannel();
+        if(channel == null || !channel.isText()) {
+            return "Channel of the ticket is not present!";
+        }
+        let userIds = [...this.ticketData.userIds, this.ticketData.creatorId];
+        userIds.forEach(userId => {
+            channel?.permissionOverwrites.edit(userId, {
+                VIEW_CHANNEL: true,
+            });
+        });
+        let category = config.getCategory(this.ticketData.categoryId);
+        let author: GuildMember | null = null;
+        try {
+            author = await channel.guild.members.fetch(this.ticketData.creatorId)
+        } catch(ignored) {}
+        await channel.send({
+            embeds: [
+                new MessageEmbed()
+                    .setColor(COLOR_INFO)
+                    .setTitle(category.mapIfPresent(c => c.name) || "Unknown Category")
+                    .setDescription(category.mapIfPresent(c => c.info
+                        .replaceAll("%n", "\n")) || "No description info.")
+            ],
+            content: author?.toString()
+        });
+        return null;
+    }
+    async delete(): Promise<boolean> {
+        let guild = bot.getGuild(this.guildId);
+        if(guild == null) return false;
+        let channel = await guild.channels.fetch(this.canalId);
+        if(channel != null) {
+            try {
+                await channel.delete();
+            } catch(err) {
+                logger.err(`Cannot delete ticket channel ${this.canalId} on server ${this.guildId} (${guild.name}): ${err}`);
+                return false;
+            }
+        }
+        let tickets = this.botData.tickets;
+        if(tickets != null) {
+            tickets.remove(this);
+            this.botData.save();
+        }
+        return true;
+    }
+    getUsers(): TicketUser[] {
+        return this.ticketData.userIds.map(this.botData.getUser);
+    }
+    getCategory(): ValOpt<TicketCategory> {
+        return config.getCategory(this.ticketData.categoryId);
+    }
+    async fetchChannel(): Promise<NonThreadGuildBasedChannel | null> {
+        let guild = bot.getGuild(this.guildId);
+        if(guild == null) return null;
+        return await guild.channels.fetch(this.canalId);
+    }
+}
+
+export class TicketUser extends PermissionHolder {
+    private readonly memberId: string;
+    constructor(memberId: string) {
+        super();
+        this.memberId = memberId;
+    }
+
+    /**
+     * Checks if this user has specific permission or
+     * permission group. Difference between this method
+     * and PermissionHolder.hasPermissionNode is that
+     * this method checks if the user has administrator
+     * permissions on the server.
+     * @param id The permission or permission context id
+     * @param guild The guild to check the permission on
+     */
+    async hasPermissionOnGuild(id: string, guild: Guild | string | undefined): Promise<boolean> {
+        if(typeof guild === "string") {
+            guild = bot.getGuild(guild);
+        }
+        if(guild !== undefined) {
+            let member = await guild.members.fetch(this.memberId);
+            if(member != null && member.permissions.has(Permissions.FLAGS.ADMINISTRATOR)) {
+                return true;
+            }
+        }
+        return super.hasPermissionNode(id);
+    }
+
+    get getMemberId(): string {
+        return this.memberId;
+    }
+    async toDJSMember(g: Guild): Promise<GuildMember> {
+        return g.members.fetch(this.memberId);
     }
 }
 
