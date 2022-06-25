@@ -10,6 +10,7 @@ import {registerCommands} from "./util/index";
 import {JsonFileMap} from "./configuration";
 import {YamlMessage, MessagesConfiguration} from "./configuration/impl/messages";
 import {hasProperties, loadModulesRecursively} from "./util";
+import {groups} from "./api/permission";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -45,7 +46,20 @@ let commands = [
             .setDescription("Performs setup check and offers some actions to take."))
         .addSubcommand(new SlashCommandSubcommandBuilder()
             .setName("reload")
-            .setDescription("Reloads the bot.")),
+            .setDescription("Reloads the bot."))
+        .addSubcommand(new SlashCommandSubcommandBuilder()
+            .setName("setgroup")
+            .setDescription("Manages player's tickets group.")
+            .addUserOption(option => option.setName("user")
+                .setDescription("User to modify group for")
+                .setRequired(true))
+            .addStringOption(option => option.setName("group")
+                .setDescription("Group to set to the user")
+                .setRequired(true)
+                .addChoices(...groups()
+                    .map(g => {
+                        return { name: g.name, value: g.id }
+                    }), { name: "* Clear Groups *", value: "_clear_" }))),
     new SlashCommandBuilder()
         .setName("ticket")
         .setDescription("Ticket/User in ticket manipulation commands.")

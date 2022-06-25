@@ -1,15 +1,18 @@
-import {GuildChannel, Interaction, MessageEmbed, TextChannel} from "discord.js";
+import {GuildChannel, Interaction, MessageActionRow, MessageEmbed, MessageSelectMenu, TextChannel} from "discord.js";
 import {isExactCommand, reply, replyError} from "../../util";
 import {setFooter} from "../../util/index";
 import {bot, message} from "../../app";
 import {YamlMessage} from "../../configuration/impl/messages";
-import {COLOR_SUCCESS} from "../../const";
+import {COLOR_SUCCESS, TICKET_ADMIN_DROPDOWN_ID} from "../../const";
 import {Ticket} from "../../configuration/impl/data";
+import {doIfHasPermission} from "../../permissions";
+import {PERMISSIONS} from "../../api/permission";
+import assert from "assert";
 
 export = {
     on: 'interactionCreate',
     evt: async (interaction: Interaction) => {
-        if(interaction.isCommand() && isExactCommand(interaction, "ticket.admin")) {
+        if(interaction.isCommand() && interaction.commandName === "ticket") {
             let channel = interaction.channel;
             if(channel == null || !channel.isText() || !(channel instanceof GuildChannel)) {
                 await replyError(interaction, message(YamlMessage.BAD_CHANNEL));
@@ -20,25 +23,41 @@ export = {
                 await replyError(interaction, message(YamlMessage.NOT_TICKET_CHANNEL));
                 return;
             }
-            let embed = new MessageEmbed()
-                .setTitle("Ticket Admin Panel")
-                .setDescription(`You are curently in ticket <#${channel.id}>! Please select an action from dropdown menu below.`)
-                .setColor(COLOR_SUCCESS);
-            embed.setFields([
-                {
-                    name: "Category",
-                    value: ticket.getCategory().mapIfPresent(c => c.name) || "Unknown",
-                    inline: true
-                },
-                {
-                    name: "Members",
-                    value: ticket.getUsers().length.toString(),
-                    inline: true
-                }
-            ]);
-            setFooter(embed);
-            await reply(interaction, embed);
-            // TODO
+            if(isExactCommand(interaction, "ticket.admin")) {
+                await doIfHasPermission(interaction, PERMISSIONS.COMMANDS.TICKET_ADMIN, async () => {
+                    assert(channel);
+                    assert(ticket);
+                    let embed = new MessageEmbed()
+                        .setTitle(message(YamlMessage.TICKET.ADMIN_EMBED.TITLE))
+                        .setDescription(message(YamlMessage.TICKET.ADMIN_EMBED.DESCRIPTION, `<#${channel.id}>`))
+                        .setColor(COLOR_SUCCESS);
+                    embed.setFields([
+                        {
+                            name: message(YamlMessage.TICKET.ADMIN_EMBED.FIELDS.CATEGORY.TITLE),
+                            value: ticket.getCategory().mapIfPresent(c => c.name) || message(YamlMessage.TICKET.ADMIN_EMBED.FIELDS.CATEGORY.UNKNOWN),
+                            inline: true
+                        }
+                    ]);
+                    setFooter(embed);
+                    await interaction.reply({
+                        embeds: [embed],
+                        components: [
+                            new MessageActionRow()
+                                .addComponents(new MessageSelectMenu()
+                                    .setCustomId(TICKET_ADMIN_DROPDOWN_ID)
+                                    .setPlaceholder("Select ticket Action")
+                                    .addOptions([
+                                        {
+                                            label: "Delete Ticket",
+                                            description: "Delete the ticket you are in.",
+                                            value: "delete"
+                                        }
+                                    ]))
+                        ],
+                        ephemeral: true
+                    });
+                });
+            }
         }
     }
 }

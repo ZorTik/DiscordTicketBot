@@ -1,6 +1,6 @@
 import {Canal, JsonFileMap, ValOpt} from "../index";
 import {KeyValueStorage} from "../../util";
-import {PermissionContext, PermissionHolder, TicketBot, TicketRequirements} from "../../bot";
+import {TicketBot, TicketRequirements} from "../../bot";
 import {
     Guild,
     GuildChannel,
@@ -13,6 +13,7 @@ import {
 import {bot, config, logger} from "../../app";
 import {COLOR_INFO, TICKET_IDS_KEY, USER_IDS_KEY} from "../../const";
 import {TicketCategory} from "./main";
+import {PermissionHolder} from "../../permissions";
 
 export class TicketBotData extends KeyValueStorage<string, any> {
     readonly source: JsonFileMap;
@@ -36,6 +37,7 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         this.joinChannel.save();
         this.ticketsCategory.save();
         this.tickets?.save();
+        this.users?.save();
         this.writeData(data);
         return true;
     }

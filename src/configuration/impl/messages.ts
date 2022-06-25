@@ -28,6 +28,8 @@ export class YamlMessage<T> {
     static BAD_CHANNEL = new YamlMessage("bad_channel", "This message is not in a right channel!");
     static JOIN_CANAL_SET = new YamlMessage("join_canal_set", "Join canal has been successfully set!");
     static TICKETS_CATEGORY_SET = new YamlMessage("tickets_category_set", "Tickets category has been successfully set!");
+    static USER_GROUP_CHANGED = new YamlMessage("user_group_changed", "Group of user {} has been changed to {}!");
+    static USER_GROUPS_CLEARED = new YamlMessage("user_groups_cleared", "Groups of user {} has been cleared!");
     static NOT_CHILD_CHANNEL = new YamlMessage("not_child_channel", "This message is not in a child text channel!");
     static NOT_TICKET_CHANNEL = new YamlMessage("not_ticket_channel", "This message is not in a ticket channel!");
     static SETUP_FINISH = new YamlMessage("setup_finish", "Ticket Bot is set up correctly and can be used now!");
@@ -69,6 +71,18 @@ export class YamlMessage<T> {
         COLOR: new YamlMessage("join_embed.color", "#00ff99"),
         SELECTION_MENU: {
             PLACEHOLDER: new YamlMessage("join_embed.selection_menu.placeholder", "Select a Category")
+        }
+    }
+    static TICKET = {
+        ADMIN_EMBED: {
+            TITLE: new YamlMessage("ticket.admin_embed.title", "Ticket Admin Panel"),
+            DESCRIPTION: new YamlMessage("ticket.admin_embed.description", "You are currently in ticket {}! Please select an action from dropdown menu below."),
+            FIELDS: {
+                CATEGORY: {
+                    TITLE: new YamlMessage("ticket.admin_embed.fields.category.title", "Category"),
+                    UNKNOWN: new YamlMessage("ticket.admin_embed.fields.category.unknown", "Unknown")
+                }
+            }
         }
     }
     static ALL: YamlMessage<any>[] = [

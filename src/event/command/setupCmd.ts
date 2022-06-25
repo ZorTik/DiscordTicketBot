@@ -10,9 +10,9 @@ import {bot, message, messages} from "../../app";
 import {isExactCommand, reply, ReplyInteraction, replySuccess} from "../../util";
 import {YamlMessage} from "../../configuration/impl/messages";
 import {COLOR_ERROR, COLOR_SUCCESS} from "../../const";
-import {doIfHasPermission} from "../../bot";
 import {PERMISSIONS} from "../../api/permission";
 import assert from "assert";
+import {doIfHasPermission} from "../../permissions";
 const CHECK_SELECT_MENU_ID = "setup-check-select-menu";
 export = {
     on: 'interactionCreate',

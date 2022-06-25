@@ -1,8 +1,9 @@
-import {PermissionGroup} from "../bot";
+import {PermissionGroup} from "../permissions";
 
 export const PERMISSIONS = {
     COMMANDS: {
-        SETUP: "setup_command"
+        SETUP: "setup_command",
+        TICKET_ADMIN: "ticket_admin"
     }
 }
 
@@ -11,7 +12,8 @@ export const GROUPS = {
         id: "admin",
         name: "Administrator",
         nodes: [
-            PERMISSIONS.COMMANDS.SETUP
+            PERMISSIONS.COMMANDS.SETUP,
+            PERMISSIONS.COMMANDS.TICKET_ADMIN
         ]
     }
 }

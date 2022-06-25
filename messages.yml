@@ -3,6 +3,8 @@ server_not_loaded: "Server data are not loaded!"
 bad_channel: "This message is not in a right channel!"
 join_canal_set: "Join canal has been successfully set!"
 tickets_category_set: "Tickets category has been successfully set!"
+user_group_changed: "Group of user {} has been changed to {}!"
+user_groups_cleared: "Groups of user {} has been cleared!"
 not_child_channel: "This message is not in a child text channel!"
 not_ticket_channel: "This channel is not a ticket channel!"
 setup_incomplete: "You need to set up everything before you can finish the setup! Error: {}"
@@ -36,3 +38,11 @@ join_embed:
   color: "#00ff99"
   selection_menu:
     placeholder: "Select a Category"
+ticket:
+  admin_embed:
+    title: "Ticket Admin Panel"
+    description: "You are currently in ticket {}! Please select an action from dropdown menu below."
+    fields:
+      category:
+        title: "Category"
+        unknown: "Unknown"

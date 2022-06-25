@@ -1,4 +1,5 @@
 export const CATEGORIES_DROPDOWN_ID = "categories-dropdown";
+export const TICKET_ADMIN_DROPDOWN_ID = "ticket-admin-dropdown";
 
 export const JOIN_MESSAGE_KEY: string = "join-message";
 export const TICKET_IDS_KEY: string = "ticket-ids";
