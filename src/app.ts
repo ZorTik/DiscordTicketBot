@@ -1,5 +1,5 @@
 import {MainConfiguration} from "./configuration/impl/main";
-import {ApplicationCommand, ClientEvents, Guild, Snowflake} from "discord.js";
+import {ApplicationCommand, ClientEvents, Guild} from "discord.js";
 import {ReloadHandler, TicketBot} from "./bot";
 import * as fs from "fs";
 import {SlashCommandBuilder, SlashCommandSubcommandBuilder} from "@discordjs/builders";
@@ -8,9 +8,10 @@ import {Routes} from "discord-api-types/v9";
 import {appGuildCommands} from "./util/routes";
 import {registerCommands} from "./util/index";
 import {JsonFileMap} from "./configuration";
-import {YamlMessage, MessagesConfiguration} from "./configuration/impl/messages";
+import {MessagesConfiguration, YamlMessage} from "./configuration/impl/messages";
 import {hasProperties, loadModulesRecursively} from "./util";
 import {groups} from "./api/permission";
+import {ActivityTypes} from "discord.js/typings/enums";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -132,10 +133,27 @@ try {
                 }
             });
             await bot.reload();
+            function updateActivity() {
+                let user = client.user;
+                if(user != null) {
+                    let ticketsCount = 0;
+                    client.guilds.cache.forEach((g: Guild) => {
+                        ticketsCount += bot.getTickets(g.id).length;
+                    });
+                    user.setActivity(`${ticketsCount} tickets`, {
+                        type: ActivityTypes.WATCHING
+                    });
+                }
+            }
+            updateActivity();
+            setInterval(updateActivity, 30000);
         });
 } catch (e) {
     exit("Cannot login client: " + (e as Error).message)
 }
 export function invokeStop() {
-
+    bot.guildData.forEach(gd => {
+        logger.info(`Saving data for guild ${gd.guildId}...`)
+        gd.save();
+    });
 }

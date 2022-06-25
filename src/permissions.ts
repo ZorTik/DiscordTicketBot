@@ -2,7 +2,7 @@ import {HasIdentity, HasName} from "./types";
 import {replyError, ReplyInteraction} from "./util";
 import {GuildMember} from "discord.js";
 import {bot} from "./app";
-import { groups } from "./api/permission";
+import {groups} from "./api/permission";
 
 export class PermissionHolder {
 
@@ -28,6 +28,11 @@ export class PermissionHolder {
             || this.getPermissionGroups().some(g => this.hasPermissionNodeInContext(id, g));
     }
 
+    /**
+     * Returns existing permission group objects.
+     * Skips groups with non-existent id.
+     * @return PermissionGroup array.
+     */
     getPermissionGroups(): PermissionGroup[] {
         return groups().filter(g => this.groups.includes(g.id));
     }

@@ -124,10 +124,10 @@ export class YamlConfiguration extends FileConfiguration {
     getStr(path: string, def: string | null = null): ValOpt<string> {
         return this.get(path, def);
     }
-    getCanal(path: string): ValOpt<Canal> {
+    getCanal(path: string): ValOpt<ChannelReference> {
         return this.from((doc: Document.Parsed) => {
             let id = <string>YamlConfiguration._getIn(doc, path);
-            return id != null ? new Canal(id) : null;
+            return id != null ? new ChannelReference(id) : null;
         });
     }
     get<T>(path: string, def: T | null = null): ValOpt<T> {
@@ -213,7 +213,7 @@ export class JsonFileMap extends FileConfiguration {
         return this.dataJson.hasOwnProperty(key);
     }
 }
-export class Canal extends ValOpt<string> {
+export class ChannelReference extends ValOpt<string> {
     getId(): string | null {
         return this.get();
     }

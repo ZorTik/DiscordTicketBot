@@ -36,6 +36,11 @@ export = {
                             name: message(YamlMessage.TICKET.ADMIN_EMBED.FIELDS.CATEGORY.TITLE),
                             value: ticket.getCategory().mapIfPresent(c => c.name) || message(YamlMessage.TICKET.ADMIN_EMBED.FIELDS.CATEGORY.UNKNOWN),
                             inline: true
+                        },
+                        {
+                            name: message(YamlMessage.TICKET.ADMIN_EMBED.FIELDS.STATE.TITLE),
+                            value: ticket.ticketData.state.name,
+                            inline: true
                         }
                     ]);
                     setFooter(embed);
@@ -48,8 +53,8 @@ export = {
                                     .setPlaceholder("Select ticket Action")
                                     .addOptions([
                                         {
-                                            label: "Delete Ticket",
-                                            description: "Delete the ticket you are in.",
+                                            label: message(YamlMessage.TICKET.ADMIN_EMBED.SELECTION_MENU.DELETE_TICKET.LABEL),
+                                            description: message(YamlMessage.TICKET.ADMIN_EMBED.SELECTION_MENU.DELETE_TICKET.DESC),
                                             value: "delete"
                                         }
                                     ]))

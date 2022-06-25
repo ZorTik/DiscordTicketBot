@@ -4,35 +4,38 @@ import {
     CategoryChannel,
     Client,
     Guild,
-    GuildChannel, GuildMember, Interaction,
-    Message, MessageEmbed,
+    GuildChannel, GuildMember, Message, MessageEmbed,
     NonThreadGuildBasedChannel, Permissions, Snowflake, TextChannel
 } from "discord.js";
 import {bot, client, config, exit, invokeStop, logger} from "./app";
-import {Canal, JsonFileMap, ValOpt} from "./configuration";
+import {ChannelReference, JsonFileMap, ValOpt} from "./configuration";
 import {DefaultLogger} from "./logging";
 import assert from "assert";
 import {TicketBotData} from "./configuration/impl/data";
 import {ChannelTypes} from "discord.js/typings/enums";
 import {HasIdentity, HasName, Nullable} from "./types";
-import {isAdmin, replyError, ReplyInteraction} from "./util";
+import {isAdmin, loadModulesRecursively} from "./util";
 import {COLOR_INFO, JOIN_MESSAGE_KEY} from "./const";
 import {TicketCategory} from "./configuration/impl/main";
 import {PermissionHolder} from "./permissions";
+import {EventEmitter, NotifySubscriber} from "./event";
+import {EVENTS} from "./api/event";
+import {STATES} from "./api/state";
 
 /**
  * The main bot class.
  * @author ZorTik
  */
-export class TicketBot {
+export class TicketBot extends EventEmitter {
 
-    private readonly guildData: Map<string, Setup>;
     private readonly bot: Client;
     private readonly logger: DefaultLogger;
     private readonly storage: JsonFileMap;
+    readonly guildData: Map<string, Setup>;
     readonly reloadHandlers: ReloadHandler[];
 
     constructor(storage: JsonFileMap, bot: Client = client, _logger: DefaultLogger = logger) {
+        super();
         this.logger = _logger;
         this.storage = storage;
         this.guildData = new Map<string, Setup>();
@@ -41,6 +44,7 @@ export class TicketBot {
         });
         this.reloadHandlers = [];
         this.bot = bot;
+        this.initSubscribers();
     }
 
     /**
@@ -142,7 +146,8 @@ export class TicketBot {
             canalId: ticketChannel.id,
             categoryId: ticketCategory.identifier,
             creatorId: creator.id,
-            userIds: ((<TicketUsersRequirements>requirements).userIds) || []
+            userIds: ((<TicketUsersRequirements>requirements).userIds) || [],
+            state: STATES.OPEN
         });
         let errorMessage = await ticket.runSetup();
         if(errorMessage != null) {
@@ -150,7 +155,7 @@ export class TicketBot {
             let ticketCache = guildData.tickets;
             ticketCache?.remove(ticket);
             return errorMessage;
-        }
+        } else ticket.setState(STATES.OPEN);
         return ticket;
     }
 
@@ -222,7 +227,8 @@ export class TicketBot {
      * Returns all saved ticket references.
      * @param guildId
      */
-    getTickets(guildId: string): Ticket[] {
+    getTickets(guildId: string | undefined | null): Ticket[] {
+        if(guildId == null) return [];
         return this.getGuildData(guildId)?.tickets?.data || [];
     }
 
@@ -246,11 +252,29 @@ export class TicketBot {
         return <Setup | null>(this.guildData.has(id)?this.guildData.get(id) : null);
     }
 
+    /**
+     * Initialization of internal event subscribers.
+     * This method registers new subscribers to this
+     * emitter. Talking about internal event system
+     * which is not linked with DJS event system.
+     * @private
+     */
+    private initSubscribers() {
+        loadModulesRecursively("event-internal")
+            .then(mods => mods.forEach(m => {
+                let subs = <NotifySubscriber>m;
+                let id = subs.id;
+                if(id != null) {
+                    this.on(id, subs.on);
+                }
+            }));
+    }
+
     private async clearResources(guild: Guild, guildData: Setup | null | undefined): Promise<Nullable<string>> {
         if(guildData == null) {
             return "Guild is not loaded.";
         }
-        const joinCanal: Canal = guildData.joinChannel;
+        const joinCanal: ChannelReference = guildData.joinChannel;
         const mid = guildData.get(JOIN_MESSAGE_KEY);
         if(mid != null && joinCanal.isPresent()) {
             let djsC;
@@ -273,7 +297,7 @@ export class TicketBot {
     private doIfCanalMember(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => any) {
         this.supplyIfCanalMember(channel, action);
     }
-    private supplyIfCanalMember<T>(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => Nullable<T>): T | null {
+    private supplyIfCanalMember<T>(channel: GuildChannel, action: (g: Guild, c: GuildChannel) => Nullable<T>): Nullable<T> {
         let guild = channel.guild;
         return guild != null ? action(guild, channel) : null;
     }
@@ -304,13 +328,18 @@ export class TicketBot {
     }
 }
 
+export type TicketState = HasName & {
+    id: string;
+}
+
 export type TicketData = {
     canalId: string;
     categoryId: string,
     creatorId: string;
     userIds: string[];
+    state: TicketState;
 }
-export class Ticket extends Canal {
+export class Ticket extends ChannelReference {
 
     static async make(guild: Guild, requirements: TicketRequirements): Promise<Ticket | string> {
         return bot.makeTicket(guild, requirements);
@@ -325,15 +354,15 @@ export class Ticket extends Canal {
     }
 
     private botData: TicketBotData;
+    readonly ticketData: TicketData;
     readonly guildId: string;
     readonly canalId: string;
-    readonly ticketData: TicketData;
     private constructor(data: TicketBotData, ticketData: TicketData) {
         super(ticketData.canalId);
         this.botData = data;
+        this.ticketData = ticketData;
         this.guildId = data.guildId;
         this.canalId = ticketData.canalId;
-        this.ticketData = ticketData;
     }
     async runSetup(): Promise<string | null> {
         let channel = await this.fetchChannel();
@@ -361,6 +390,7 @@ export class Ticket extends Canal {
             ],
             content: author?.toString()
         });
+        bot.emit(EVENTS.TICKET.CREATE, this);
         return null;
     }
     async delete(): Promise<boolean> {
@@ -381,6 +411,11 @@ export class Ticket extends Canal {
             this.botData.save();
         }
         return true;
+    }
+    setState(state: TicketState) {
+        this.ticketData.state = state;
+        this.botData.save();
+        bot.emit(EVENTS.TICKET.STATE_CHANGE, state);
     }
     getUsers(): TicketUser[] {
         return this.ticketData.userIds.map(this.botData.getUser);

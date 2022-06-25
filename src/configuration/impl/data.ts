@@ -1,4 +1,4 @@
-import {Canal, JsonFileMap, ValOpt} from "../index";
+import {ChannelReference, JsonFileMap, ValOpt} from "../index";
 import {KeyValueStorage} from "../../util";
 import {TICKET_IDS_KEY, USER_IDS_KEY} from "../../const";
 import {Ticket, TicketUser} from "../../bot";
@@ -74,7 +74,7 @@ export class TicketBotData extends KeyValueStorage<string, any> {
     }
 }
 
-export class SavedCanal extends Canal {
+export class SavedCanal extends ChannelReference {
     private readonly ref: TicketBotData;
     private readonly key: string | null;
     constructor(ref: TicketBotData, key: string | null = null) {

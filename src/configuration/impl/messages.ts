@@ -81,6 +81,15 @@ export class YamlMessage<T> {
                 CATEGORY: {
                     TITLE: new YamlMessage("ticket.admin_embed.fields.category.title", "Category"),
                     UNKNOWN: new YamlMessage("ticket.admin_embed.fields.category.unknown", "Unknown")
+                },
+                STATE: {
+                    TITLE: new YamlMessage("ticket.admin_embed.fields.state.title", "Current State")
+                }
+            },
+            SELECTION_MENU: {
+                DELETE_TICKET: {
+                    LABEL: new YamlMessage("ticket.admin_embed.selection_menu.delete_ticket.label", "Delete Ticket"),
+                    DESC: new YamlMessage("ticket.admin_embed.selection_menu.delete_ticket.desc", "Delete the ticket you are in.")
                 }
             }
         }

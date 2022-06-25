@@ -46,3 +46,9 @@ ticket:
       category:
         title: "Category"
         unknown: "Unknown"
+      state:
+        title: "Current State"
+    selection_menu:
+      delete_ticket:
+        label: "Delete Ticket"
+        desc: "Delete the ticket you are in."
