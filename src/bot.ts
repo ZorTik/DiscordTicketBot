@@ -147,7 +147,8 @@ export class TicketBot extends EventEmitter {
             categoryId: ticketCategory.identifier,
             creatorId: creator.id,
             userIds: ((<TicketUsersRequirements>requirements).userIds) || [],
-            state: STATES.OPEN
+            state: STATES.OPEN,
+            other: {}
         });
         let errorMessage = await ticket.runSetup();
         if(errorMessage != null) {
@@ -263,7 +264,7 @@ export class TicketBot extends EventEmitter {
         loadModulesRecursively("event-internal")
             .then(mods => mods.forEach(m => {
                 let subs = <NotifySubscriber>m;
-                let id = subs.id;
+                let id = subs.evt;
                 if(id != null) {
                     this.on(id, subs.on);
                 }
@@ -338,6 +339,7 @@ export type TicketData = {
     creatorId: string;
     userIds: string[];
     state: TicketState;
+    other: any;
 }
 export class Ticket extends ChannelReference {
 
@@ -353,7 +355,7 @@ export class Ticket extends ChannelReference {
         return ticket;
     }
 
-    private botData: TicketBotData;
+    readonly botData: TicketBotData;
     readonly ticketData: TicketData;
     readonly guildId: string;
     readonly canalId: string;
@@ -415,13 +417,16 @@ export class Ticket extends ChannelReference {
     setState(state: TicketState) {
         this.ticketData.state = state;
         this.botData.save();
-        bot.emit(EVENTS.TICKET.STATE_CHANGE, state);
+        bot.emit(EVENTS.TICKET.STATE_CHANGE, this);
     }
     getUsers(): TicketUser[] {
         return this.ticketData.userIds.map(this.botData.getUser);
     }
     getCategory(): ValOpt<TicketCategory> {
         return config.getCategory(this.ticketData.categoryId);
+    }
+    async fetchGuild(): Promise<Nullable<Guild>> {
+        return await client.guilds.fetch(this.guildId);
     }
     async fetchChannel(): Promise<NonThreadGuildBasedChannel | null> {
         let guild = bot.getGuild(this.guildId);

@@ -12,6 +12,7 @@ import {MessagesConfiguration, YamlMessage} from "./configuration/impl/messages"
 import {hasProperties, loadModulesRecursively} from "./util";
 import {groups} from "./api/permission";
 import {ActivityTypes} from "discord.js/typings/enums";
+import {STATES} from "./api/state";
 
 const {Client, Intents} = require('discord.js');
 const {DateTimeLogger} = require("./logging");
@@ -138,7 +139,8 @@ try {
                 if(user != null) {
                     let ticketsCount = 0;
                     client.guilds.cache.forEach((g: Guild) => {
-                        ticketsCount += bot.getTickets(g.id).length;
+                        ticketsCount += bot.getTickets(g.id)
+                            .filter(t => t.ticketData.state.id === STATES.OPEN.id).length;
                     });
                     user.setActivity(`${ticketsCount} tickets`, {
                         type: ActivityTypes.WATCHING

@@ -3,8 +3,8 @@ export const STATES = {
         id: "OPEN",
         name: "Open"
     },
-    CLOSED: {
-        id: "CLOSED",
-        name: "Closed"
+    SOLVED: {
+        id: "SOLVED",
+        name: "Solved"
     }
 }

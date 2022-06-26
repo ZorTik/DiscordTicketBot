@@ -28,7 +28,9 @@ export class EventEmitter {
         }
     }
 }
-export type NotifySubscriber = HasIdentity & NotifySubscriberPresent;
+export type NotifySubscriber = NotifySubscriberPresent & {
+    evt: string;
+};
 export type NotifySubscriberPresent = {
     on: NotifySubscriberFunc;
 }

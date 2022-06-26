@@ -1,13 +1,26 @@
-import {GuildChannel, Interaction, MessageActionRow, MessageEmbed, MessageSelectMenu, TextChannel} from "discord.js";
+import {
+    GuildChannel,
+    Interaction,
+    MessageActionRow,
+    MessageButton,
+    MessageEmbed,
+    MessageSelectMenu
+} from "discord.js";
 import {isExactCommand, reply, replyError} from "../../util";
 import {setFooter} from "../../util/index";
 import {bot, message} from "../../app";
 import {YamlMessage} from "../../configuration/impl/messages";
-import {COLOR_SUCCESS, TICKET_ADMIN_DROPDOWN_ID} from "../../const";
+import {
+    COLOR_SUCCESS,
+    TICKET_ADMIN_DROPDOWN_ID,
+    TICKET_USER_MARK_OPEN_ID,
+    TICKET_USER_MARK_SOLVED_ID
+} from "../../const";
 import {doIfHasPermission} from "../../permissions";
 import {PERMISSIONS} from "../../api/permission";
 import assert from "assert";
 import {Ticket} from "../../bot";
+import {STATES} from "../../api/state";
 
 export = {
     on: 'interactionCreate',
@@ -47,6 +60,19 @@ export = {
                     await interaction.reply({
                         embeds: [embed],
                         components: [
+                            new MessageActionRow()
+                                .addComponents([
+                                    new MessageButton()
+                                        .setCustomId(TICKET_USER_MARK_OPEN_ID) // TODO: Make click handler.
+                                        .setLabel("Mark Open")
+                                        .setStyle("SUCCESS")
+                                        .setDisabled(ticket.ticketData.state.id === STATES.OPEN.id),
+                                    new MessageButton()
+                                        .setCustomId(TICKET_USER_MARK_SOLVED_ID)
+                                        .setLabel("Mark Solved")
+                                        .setStyle("DANGER")
+                                        .setDisabled(ticket.ticketData.state.id === STATES.SOLVED.id)
+                                ]),
                             new MessageActionRow()
                                 .addComponents(new MessageSelectMenu()
                                     .setCustomId(TICKET_ADMIN_DROPDOWN_ID)

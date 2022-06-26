@@ -1,11 +1,11 @@
 import {NotifySubscriber} from "../../event";
 import {Ticket} from "../../bot";
-import {MessageEmbed, TextChannel} from "discord.js";
-import {COLOR_SUCCESS} from "../../const";
+import {MessageActionRow, MessageButton, MessageEmbed, TextChannel} from "discord.js";
+import {COLOR_SUCCESS, TICKET_USER_MARK_SOLVED_ID} from "../../const";
 import {EVENTS} from "../../api/event";
 
 const subs: NotifySubscriber = {
-    id: EVENTS.TICKET.CREATE,
+    evt: EVENTS.TICKET.CREATE,
     on: async (data: any) => {
         if(data instanceof Ticket) {
             let ticket = <Ticket>data;
@@ -16,9 +16,18 @@ const subs: NotifySubscriber = {
                     .setTitle("Manage this Ticket")
                     .setDescription("Select options below to manage this ticket.")
                     .setColor(COLOR_SUCCESS);
-                await channel.send({
-                    embeds: [embed]
+                let message = await channel.send({
+                    embeds: [embed],
+                    components: [
+                        new MessageActionRow()
+                            .addComponents(new MessageButton()
+                                .setCustomId(TICKET_USER_MARK_SOLVED_ID)
+                                .setLabel("Mark Solved")
+                                .setStyle("SUCCESS"))
+                    ]
                 });
+                ticket.ticketData.other.userControllerId = message.id;
+                ticket.botData.save();
                 // TODO: Ticket state management
             }
         }
