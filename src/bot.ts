@@ -447,8 +447,8 @@ export class Ticket extends ChannelReference {
             return false;
         }
         channel = <TextChannel>channel;
-        let edit: (editId: string, state: boolean) => void = (eId, state) => {
-            (<TextChannel>channel)!!.permissionOverwrites.edit(eId, {
+        let edit: (editId: string, state: boolean) => void = async (eId, state) => {
+            await (<TextChannel>channel)!!.permissionOverwrites.edit(eId, {
                 VIEW_CHANNEL: state,
                 SEND_MESSAGES: state,
                 SEND_TTS_MESSAGES: state,
@@ -460,7 +460,8 @@ export class Ticket extends ChannelReference {
         bot.getRolesByPermission(channel.guild, PERMISSIONS.COMMANDS.TICKET_ADMIN)
             .map(r => r.roleId).forEach(rId => {
                 edit(rId, true);
-        })
+        });
+        await edit(client?.user?.id, true);
         return true;
     }
 
