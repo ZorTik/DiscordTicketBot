@@ -5,7 +5,7 @@ import {
     Client,
     Guild,
     GuildChannel, GuildMember, Message, MessageEmbed,
-    NonThreadGuildBasedChannel, Permissions, Snowflake, TextChannel
+    NonThreadGuildBasedChannel, Permissions, Role, Snowflake, TextChannel
 } from "discord.js";
 import {bot, client, config, exit, invokeStop, logger} from "./app";
 import {ChannelReference, JsonFileMap, ValOpt} from "./configuration";
@@ -21,6 +21,7 @@ import {PermissionHolder} from "./permissions";
 import {EventEmitter, NotifySubscriber} from "./event";
 import {EVENTS} from "./api/event";
 import {STATES} from "./api/state";
+import {PERMISSIONS} from "./api/permission";
 
 /**
  * The main bot class.
@@ -138,7 +139,13 @@ export class TicketBot extends EventEmitter {
             permissionOverwrites: [
                 {
                     id: guild.id,
-                    deny: ["VIEW_CHANNEL"]
+                    deny: [
+                        "VIEW_CHANNEL",
+                        "SEND_MESSAGES",
+                        "READ_MESSAGE_HISTORY",
+                        "SEND_MESSAGES_IN_THREADS",
+                        "SEND_TTS_MESSAGES"
+                    ]
                 }
             ]
         });
@@ -210,8 +217,31 @@ export class TicketBot extends EventEmitter {
         }
         let guild = member.guild;
         let guildData = this.getGuildData(guild);
-        let ticketUser = guildData?.getUser(member.id);
-        return ticketUser?.hasPermissionNode(nodeId) || false;
+        if(guildData == null) {
+            return false;
+        }
+        let ticketUser = guildData.getUser(member.id);
+        return ticketUser.hasPermissionNode(nodeId) || member.roles.cache
+            .some(r => guildData!!.getRole(r.id).hasPermissionNode(nodeId))
+            || false;
+    }
+
+    /**
+     * Returns all roles that contain provided node or permission
+     * by given node id.
+     * @param guild The guild to get from.
+     * @param nodeId The node id.
+     */
+    getRolesByPermission(guild: Guild | string, nodeId: string): TicketRole[] {
+        if(typeof guild === "string") {
+            let g = this.bot.guilds.cache.get(guild);
+            if(g == null) return [];
+            guild = g;
+        }
+        let guildData = this.getGuildData(guild);
+        if(guildData == null) return [];
+        return guildData.roles?.data
+            .filter(r => r.hasPermissionNode(nodeId)) || [];
     }
 
     /**
@@ -371,12 +401,7 @@ export class Ticket extends ChannelReference {
         if(channel == null || !channel.isText()) {
             return "Channel of the ticket is not present!";
         }
-        let userIds = [...this.ticketData.userIds, this.ticketData.creatorId];
-        userIds.forEach(userId => {
-            channel?.permissionOverwrites.edit(userId, {
-                VIEW_CHANNEL: true,
-            });
-        });
+        await this.setVisibility(true, channel);
         let category = config.getCategory(this.ticketData.categoryId);
         let author: GuildMember | null = null;
         try {
@@ -414,6 +439,31 @@ export class Ticket extends ChannelReference {
         }
         return true;
     }
+    async setVisibility(visible: boolean, channel: Nullable<AnyChannel> = null): Promise<boolean> {
+        if(channel == null) {
+            channel = (await this.fetchChannel());
+        }
+        if(channel == null || !channel.isText()) {
+            return false;
+        }
+        channel = <TextChannel>channel;
+        let edit: (editId: string, state: boolean) => void = (eId, state) => {
+            (<TextChannel>channel)!!.permissionOverwrites.edit(eId, {
+                VIEW_CHANNEL: state,
+                SEND_MESSAGES: state,
+                SEND_TTS_MESSAGES: state,
+                READ_MESSAGE_HISTORY: state,
+            });
+        }
+        let ids = [...this.ticketData.userIds, this.ticketData.creatorId];
+        ids.forEach(eId => edit(eId, visible));
+        bot.getRolesByPermission(channel.guild, PERMISSIONS.COMMANDS.TICKET_ADMIN)
+            .map(r => r.roleId).forEach(rId => {
+                edit(rId, true);
+        })
+        return true;
+    }
+
     setState(state: TicketState) {
         this.ticketData.state = state;
         this.botData.save();
@@ -468,7 +518,21 @@ export class TicketUser extends PermissionHolder {
         return this.memberId;
     }
     async toDJSMember(g: Guild): Promise<GuildMember> {
-        return g.members.fetch(this.memberId);
+        return await g.members.fetch(this.memberId);
+    }
+}
+
+/**
+ * Represents guild role reference.
+ */
+export class TicketRole extends PermissionHolder {
+    readonly roleId: string;
+    constructor(groupId: string) {
+        super();
+        this.roleId = groupId;
+    }
+    async toDJSRole(g: Guild): Promise<Nullable<Role>> {
+        return await g.roles.fetch(this.roleId);
     }
 }
 

@@ -15,6 +15,13 @@ export const GROUPS = {
             PERMISSIONS.COMMANDS.SETUP,
             PERMISSIONS.COMMANDS.TICKET_ADMIN
         ]
+    },
+    MOD: {
+        id: "mod",
+        name: "Moderator",
+        nodes: [
+            PERMISSIONS.COMMANDS.TICKET_ADMIN
+        ]
     }
 }
 

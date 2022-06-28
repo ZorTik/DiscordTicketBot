@@ -2,7 +2,7 @@ import {MainConfiguration} from "./configuration/impl/main";
 import {ApplicationCommand, ClientEvents, Guild} from "discord.js";
 import {ReloadHandler, TicketBot} from "./bot";
 import * as fs from "fs";
-import {SlashCommandBuilder, SlashCommandSubcommandBuilder} from "@discordjs/builders";
+import {SlashCommandBuilder, SlashCommandStringOption, SlashCommandSubcommandBuilder} from "@discordjs/builders";
 import {REST, RouteLike} from "@discordjs/rest";
 import {Routes} from "discord-api-types/v9";
 import {appGuildCommands} from "./util/routes";
@@ -50,18 +50,19 @@ let commands = [
             .setName("reload")
             .setDescription("Reloads the bot."))
         .addSubcommand(new SlashCommandSubcommandBuilder()
-            .setName("setgroup")
+            .setName("assignusergroup")
             .setDescription("Manages player's tickets group.")
             .addUserOption(option => option.setName("user")
                 .setDescription("User to modify group for")
                 .setRequired(true))
-            .addStringOption(option => option.setName("group")
-                .setDescription("Group to set to the user")
-                .setRequired(true)
-                .addChoices(...groups()
-                    .map(g => {
-                        return { name: g.name, value: g.id }
-                    }), { name: "* Clear Groups *", value: "_clear_" }))),
+            .addStringOption(option => groupSelectorOptionsStringOption(option, "group", "Group to set to the user")))
+        .addSubcommand(new SlashCommandSubcommandBuilder()
+            .setName("assignrolegroup")
+            .setDescription("Manages role's tickets group.")
+            .addRoleOption(option => option.setName("role")
+                .setDescription("Role to modify group for")
+                .setRequired(true))
+            .addStringOption(option => groupSelectorOptionsStringOption(option, "group", "Group to set to the role"))),
     new SlashCommandBuilder()
         .setName("ticket")
         .setDescription("Ticket/User in ticket manipulation commands.")
@@ -158,4 +159,13 @@ export function invokeStop() {
         logger.info(`Saving data for guild ${gd.guildId}...`)
         gd.save();
     });
+}
+function groupSelectorOptionsStringOption(option: SlashCommandStringOption, name: string, description: string, required: boolean = true): SlashCommandStringOption {
+    return option.setName(name)
+        .setDescription(description)
+        .setRequired(required)
+        .addChoices(...groups()
+            .map(g => {
+                return { name: g.name, value: g.id }
+            }), { name: "* Clear Groups *", value: "_clear_" });
 }

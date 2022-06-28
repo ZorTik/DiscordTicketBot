@@ -30,6 +30,8 @@ export class YamlMessage<T> {
     static TICKETS_CATEGORY_SET = new YamlMessage("tickets_category_set", "Tickets category has been successfully set!");
     static USER_GROUP_CHANGED = new YamlMessage("user_group_changed", "Group of user {} has been changed to {}!");
     static USER_GROUPS_CLEARED = new YamlMessage("user_groups_cleared", "Groups of user {} has been cleared!");
+    static ROLE_GROUP_CHANGED = new YamlMessage("role_group_changed", "Group of role {} has been changed to {}!");
+    static ROLE_GROUPS_CLEARED = new YamlMessage("role_groups_cleared", "Groups of role {} has been cleared!");
     static NOT_CHILD_CHANNEL = new YamlMessage("not_child_channel", "This message is not in a child text channel!");
     static NOT_TICKET_CHANNEL = new YamlMessage("not_ticket_channel", "This message is not in a ticket channel!");
     static SETUP_FINISH = new YamlMessage("setup_finish", "Ticket Bot is set up correctly and can be used now!");
