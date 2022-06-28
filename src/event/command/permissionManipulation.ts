@@ -25,7 +25,7 @@ export = {
                         if(assign) {
                             let group = groups().find(g => g.id === groupIdentifier);
                             if(group == undefined) {
-                                await replyError(interaction, "Group with that identifier not found!");
+                                await replyError(interaction, message(YamlMessage.GROUP_NOT_FOUND));
                                 return;
                             }
                             groupName = group.name;
@@ -54,7 +54,7 @@ export = {
                         if(assign) {
                             let group = groups().find(g => g.id === groupIdentifier);
                             if(group == undefined) {
-                                await replyError(interaction, "Group with that identifier not found!");
+                                await replyError(interaction, message(YamlMessage.GROUP_NOT_FOUND));
                                 return;
                             }
                             groupName = group.name;

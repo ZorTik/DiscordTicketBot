@@ -64,19 +64,19 @@ export = {
                                 .addComponents([
                                     new MessageButton()
                                         .setCustomId(TICKET_USER_MARK_OPEN_ID) // TODO: Make click handler.
-                                        .setLabel("Mark Open")
+                                        .setLabel(message(YamlMessage.TICKET.ADMIN_EMBED.BUTTONS.MARK_OPEN.LABEL))
                                         .setStyle("SUCCESS")
                                         .setDisabled(ticket.ticketData.state.id === STATES.OPEN.id),
                                     new MessageButton()
                                         .setCustomId(TICKET_USER_MARK_SOLVED_ID)
-                                        .setLabel("Mark Solved")
+                                        .setLabel(message(YamlMessage.TICKET.ADMIN_EMBED.BUTTONS.MARK_SOLVED.LABEL))
                                         .setStyle("DANGER")
                                         .setDisabled(ticket.ticketData.state.id === STATES.SOLVED.id)
                                 ]),
                             new MessageActionRow()
                                 .addComponents(new MessageSelectMenu()
                                     .setCustomId(TICKET_ADMIN_DROPDOWN_ID)
-                                    .setPlaceholder("Select ticket Action")
+                                    .setPlaceholder(message(YamlMessage.TICKET.ADMIN_EMBED.SELECTION_MENU.PLACEHOLDER))
                                     .addOptions([
                                         {
                                             label: message(YamlMessage.TICKET.ADMIN_EMBED.SELECTION_MENU.DELETE_TICKET.LABEL),

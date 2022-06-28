@@ -1,6 +1,7 @@
 import {Interaction} from "discord.js";
-import {bot, config, logger, messages} from "../../app";
+import {bot, config, logger, message, messages} from "../../app";
 import {isExactCommand, replyError, replySuccess} from "../../util";
+import {YamlMessage} from "../../configuration/impl/messages";
 
 export = {
     on: 'interactionCreate',
@@ -11,7 +12,7 @@ export = {
             config.reload();
             let err = await bot.reload(guild);
             await (err == null
-                ? replySuccess(interaction, "Ticket Bot has been successfully Reloaded!")
+                ? replySuccess(interaction, message(YamlMessage.BOT_RELOADED))
                 : replyError(interaction, err));
         }
     }

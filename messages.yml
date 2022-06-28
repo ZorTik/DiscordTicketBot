@@ -1,17 +1,23 @@
 # %n - New Line
 server_not_loaded: "Server data are not loaded!"
 bad_channel: "This message is not in a right channel!"
+group_not_found: "Group with that identifier not found!"
 join_canal_set: "Join canal has been successfully set!"
 tickets_category_set: "Tickets category has been successfully set!"
 user_group_changed: "Group of user {} has been changed to {}!"
 user_groups_cleared: "Groups of user {} has been cleared!"
 role_group_changed: "Group of role {} has been changed to {}!"
 role_groups_cleared: "Groups of role {} has been cleared!"
+bot_reloaded: "Ticket Bot has been successfully Reloaded!"
 not_child_channel: "This message is not in a child text channel!"
 not_ticket_channel: "This channel is not a ticket channel!"
 setup_incomplete: "You need to set up everything before you can finish the setup! Error: {}"
 setup_finish: "Ticket Bot is set up correctly and can be used now!"
 ticket_created: "Ticket {} has been successfully created!%nPlease click on the link on this message to head up to your ticket and submit requirements."
+ticket_marked_solved: "Ticket marked as solved."
+ticket_already_marked_solved: "Ticket is already marked as solved."
+ticket_marked_open: "Ticket marked as open."
+ticket_already_marked_open: "Ticket is already marked as open."
 action_not_supported: "This action is not supported! :("
 unexpected_error: "An unexpected error has occured! Please contact admins."
 set: "✅ Set"
@@ -50,7 +56,19 @@ ticket:
         unknown: "Unknown"
       state:
         title: "Current State"
+    buttons:
+      mark_open:
+        label: "Mark Open"
+      mark_solved:
+        label: "Mark Solved"
     selection_menu:
+      placeholder: "Select ticket Action"
       delete_ticket:
         label: "Delete Ticket"
         desc: "Delete the ticket you are in."
+  user_embed:
+    title: "Manage this Ticket"
+    description: "Select options below to manage this ticket."
+    buttons:
+      mark_solved:
+        label: "Mark Solved"
