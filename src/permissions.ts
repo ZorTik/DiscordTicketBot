@@ -61,6 +61,11 @@ export async function doIfHasPermission(interaction: ReplyInteraction, nodeId: s
     }
 }
 
+export type PermissionHolderSnapshot = {
+    permissions: PermissionContext,
+    groups: string[]
+}
+
 export type PermissionContext = {
     nodes: PermissionNode[];
 }

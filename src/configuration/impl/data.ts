@@ -1,7 +1,7 @@
 import {ChannelReference, JsonFileMap, ValOpt} from "../index";
 import {KeyValueStorage} from "../../util";
 import {ROLE_IDS_KEY, TICKET_IDS_KEY, USER_IDS_KEY} from "../../const";
-import {Ticket, TicketRole, TicketUser} from "../../bot";
+import {Ticket, TicketRole, TicketRoleData, TicketUser} from "../../bot";
 
 export class TicketBotData extends KeyValueStorage<string, any> {
     readonly source: JsonFileMap;
@@ -43,7 +43,12 @@ export class TicketBotData extends KeyValueStorage<string, any> {
             (data) => Ticket.saveIfAbsent(this, data), (ticket) => ticket.ticketData);
         this.users = new SavedCollection<TicketUser>(this.data, USER_IDS_KEY);
         this.users.filter = u => u.permissions.nodes.length > 0 || u.groups.length > 0;
-        this.roles = new SavedCollection<TicketRole>(this.data, ROLE_IDS_KEY);
+        this.roles = new SavedCollection<TicketRole>(this.data, ROLE_IDS_KEY,
+            (snapshot) => new TicketRole(<TicketRoleData>snapshot), (role) => <TicketRoleData>({
+                roleId: role.roleId,
+                permissions: role.permissions,
+                groups: role.groups
+            }));
     }
     getUser(memberId: string): TicketUser {
         if(this.users == null) {
@@ -62,7 +67,11 @@ export class TicketBotData extends KeyValueStorage<string, any> {
         }
         let role = this.roles?.find(r => r.roleId === roleId);
         if(role === undefined) {
-            this.roles.push(role = new TicketRole(roleId));
+            this.roles.push(role = new TicketRole({
+                roleId: roleId,
+                permissions: {nodes: []},
+                groups: []
+            }));
             this.save();
         }
         return role;

@@ -17,7 +17,7 @@ import {HasIdentity, HasName, Nullable} from "./types";
 import {isAdmin, loadModulesRecursively} from "./util";
 import {COLOR_INFO, JOIN_MESSAGE_KEY} from "./const";
 import {TicketCategory} from "./configuration/impl/main";
-import {PermissionHolder} from "./permissions";
+import {PermissionHolder, PermissionHolderSnapshot} from "./permissions";
 import {EventEmitter, NotifySubscriber} from "./event";
 import {EVENTS} from "./api/event";
 import {STATES} from "./api/state";
@@ -522,14 +522,18 @@ export class TicketUser extends PermissionHolder {
     }
 }
 
+export type TicketRoleData = PermissionHolderSnapshot & {
+    roleId: string;
+}
+
 /**
  * Represents guild role reference.
  */
 export class TicketRole extends PermissionHolder {
     readonly roleId: string;
-    constructor(groupId: string) {
-        super();
-        this.roleId = groupId;
+    constructor(snapshot: TicketRoleData) {
+        super(snapshot.permissions.nodes, snapshot.groups);
+        this.roleId = snapshot.roleId;
     }
     async toDJSRole(g: Guild): Promise<Nullable<Role>> {
         return await g.roles.fetch(this.roleId);
