@@ -7,7 +7,7 @@ import {REST, RouteLike} from "@discordjs/rest";
 import {Routes} from "discord-api-types/v9";
 import {appGuildCommands} from "./util/routes";
 import {registerCommands} from "./util/index";
-import {JsonFileMap} from "./configuration";
+import {JsonFileMap, ValOpt} from "./configuration";
 import {MessagesConfiguration, YamlMessage} from "./configuration/impl/messages";
 import {hasProperties, loadModulesRecursively} from "./util";
 import {groups} from "./api/permission";
@@ -34,10 +34,13 @@ export function exit(message: string | null = null) {
     }
     process.exit(0);
 }
-const token = config.getToken().ifNotPresent(() => {
-    exit("No token specified!");
-    return null;
-});
+let token = new ValOpt(process.env.TICKET_BOT_TOKEN || null);
+if(token.isEmpty()) {
+    token = config.getToken().ifNotPresent(() => {
+        exit("No token specified!");
+        return null;
+    });
+}
 rest.setToken(<string>token.get());
 let commands = [
     new SlashCommandBuilder()
