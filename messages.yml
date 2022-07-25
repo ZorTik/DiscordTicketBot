@@ -31,6 +31,7 @@ setup_embed:
     desc: "Ticket system is ready to be used! You can now use Finish Setup action in selector below. You can also adjust or change all the settings and perform setup again."
   footer: "Setup all requirements with /ticketsetup!"
   selection_menu:
+    placeholder: "Available actions..."
     join_canal:
       label: "Set Join Canal"
       desc: "Sets this canal as main canal!"
@@ -44,6 +45,7 @@ join_embed:
   title: "Create Ticket"
   description: "To create new ticket, please select one of the following options listed in dropdown menu below.%n%nPlease follow rules at https://example.com/rules"
   color: "#00ff99"
+  footer: "To open ticket, select category below!"
   selection_menu:
     placeholder: "Select a Category"
 ticket:

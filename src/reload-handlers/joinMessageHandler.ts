@@ -71,7 +71,7 @@ function buildJoinEmbed(c: TextChannel): MessageEmbed {
         .setTitle(message(YamlMessage.JOIN_EMBED.TITLE))
         .setDescription(messages.join("\n"))
         .setColor(<ColorResolvable>message(YamlMessage.JOIN_EMBED.COLOR));
-    setFooter(embed, "Idk what to put here");
+    setFooter(embed, message(YamlMessage.JOIN_EMBED.FOOTER));
     return embed;
 
 }

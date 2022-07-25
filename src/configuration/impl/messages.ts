@@ -59,6 +59,7 @@ export class YamlMessage<T> {
         },
         FOOTER: new YamlMessage("setup_embed.footer", "Setup all requirements with /ticketsetup!"),
         SELECTION_MENU: {
+            PLACEHOLDER: new YamlMessage("setup_embed.selection_menu.placeholder", "Available actions..."),
             JOIN_CANAL: {
                 LABEL: new YamlMessage("setup_embed.selection_menu.join_canal.label", "Set Join Canal"),
                 DESC: new YamlMessage("setup_embed.selection_menu.join_canal.desc", "Sets this canal as main canal!")
@@ -77,6 +78,7 @@ export class YamlMessage<T> {
         TITLE: new YamlMessage("join_embed.title", "Create Ticket"),
         DESC: new YamlMessage("join_embed.description", ""),
         COLOR: new YamlMessage("join_embed.color", "#00ff99"),
+        FOOTER: new YamlMessage("join_embed.footer", "To open ticket, select category below!"),
         SELECTION_MENU: {
             PLACEHOLDER: new YamlMessage("join_embed.selection_menu.placeholder", "Select a Category")
         }

@@ -98,7 +98,7 @@ export = {
                         new MessageActionRow()
                             .addComponents(new MessageSelectMenu()
                                 .setCustomId(CHECK_SELECT_MENU_ID)
-                                .setPlaceholder("Available actions...")
+                                .setPlaceholder(message(YamlMessage.SETUP_EMBED.SELECTION_MENU.PLACEHOLDER))
                                 .addOptions([
                                     {
                                         label: message(YamlMessage.SETUP_EMBED.SELECTION_MENU.JOIN_CANAL.LABEL),
