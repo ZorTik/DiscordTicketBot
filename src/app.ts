@@ -21,7 +21,12 @@ export const info = (message: string) => logger.info(message);
 export const error = (message: string) => logger.err(message);
 info("Loading configuration...");
 export const config = new MainConfiguration("./config.yml");
-export const messages = new MessagesConfiguration("./messages.yml");
+export const lang = config.getStr("language", "en-US").get();
+const langPath = `./lang/${lang}.yml`;
+if(!fs.existsSync(langPath)) {
+    exit(`Language ${lang} is not defined!`);
+}
+export const messages = new MessagesConfiguration(langPath);
 export const client = new Client({intents: [Intents.FLAGS.GUILDS]});
 export const rest = new REST({version: "9"});
 export var bot: TicketBot;
