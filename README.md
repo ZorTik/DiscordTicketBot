@@ -1,4 +1,4 @@
 # DiscordTicketBot
-Idk, abych tu měl i něco na Discord.
+Advanced Discord Ticket Bot.
 
 > Dokumentace již brzy...
